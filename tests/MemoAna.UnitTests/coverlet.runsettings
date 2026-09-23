@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector
+        friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Include>
+            [MemoAna]MemoAna.Controllers.*,
+            [MemoAna.Application]MemoAna.Application.*,
+            [MemoAna.Domain]MemoAna.Domain.*,
+            [MemoAna.Infrastructure]MemoAna.Infrastructure.*
+          </Include>
+          <Exclude>
+            [MemoAna]Microsoft.AspNetCore.OpenApi.Generated*,
+            [MemoAna]Microsoft.AspNetCore.Components.*.g__*,
+            [MemoAna]Microsoft.Extensions.*.g__*,
+            [MemoAna]System.*
+            [Mediator.SourceGenerator]Mediator.*
+          </Exclude>
+          <ExcludeByAttribute>
+            GeneratedCodeAttribute,
+            ExcludeFromCodeCoverageAttribute
+          </ExcludeByAttribute>
+          <ExcludeByFile>
+            **/*.g.cs,
+            **/*.g.i.cs,
+            **/obj/**/*.cs
+          </ExcludeByFile>
+          <ExcludeAssembliesWithoutSources>MissingAll</ExcludeAssembliesWithoutSources>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

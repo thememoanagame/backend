@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+<PropertyGroup>
+  <TargetFramework>net10.0</TargetFramework>
+  <ImplicitUsings>enable</ImplicitUsings>
+  <Nullable>enable</Nullable>
+  <IsPackable>false</IsPackable>
+  <OutputType>Exe</OutputType>
+  <TestingPlatformCommandLineArguments>--report-trx --report-trx-filename test-results.trx --coverlet --coverlet-output-format cobertura --coverlet-include "[MemoAna]*,[MemoAna.Application]*,[MemoAna.Domain]*,[MemoAna.Infrastructure]*" --coverlet-exclude "[*.Migrations]*,[*.UnitTests]*,[Mediator*]*,[FluentValidation*]*,[MemoAna]AspNetCoreGeneratedDocument.*,[MemoAna]*.Components.*,[MemoAna]*.Pages.*,[MemoAna]*.Layout.*,[MemoAna]*.Shared.*"</TestingPlatformCommandLineArguments>
+</PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.MTP" Version="10.0.1">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.4.1">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="NSubstitute" Version="6.2.0" />
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="testconfig.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+ 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MemoAna\MemoAna.csproj" />
+    <ProjectReference Include="..\..\src\MemoAna.Application\MemoAna.Application.csproj" />
+    <ProjectReference Include="..\..\src\MemoAna.Infrastructure\MemoAna.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

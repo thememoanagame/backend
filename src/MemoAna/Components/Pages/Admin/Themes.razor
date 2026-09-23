@@ -1,0 +1,265 @@
+﻿@page "/themes"
+@inject ILogger<Themes> Logger
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-6">Gerenciar Temas do Jogo</MudText>
+
+    <MudGrid> 
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4" Elevation="3">
+                <MudText Typo="Typo.h6" Class="mb-4">Criar Novo Tema</MudText>
+
+                <MudForm @ref="_form" IsValid="@_isValid">
+                    <MudTextField @bind-Value="_newName" Label="Nome do Tema" Required="true" RequiredError="O nome é obrigatório" Class="mb-4" />
+                     
+                    <MudFileUpload T="IBrowserFile" @bind-Files="_logoFile" Accept=".webp" Class="mb-2">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Image">
+                            Selecionar Logo (.webp)
+                        </MudButton>
+                    </MudFileUpload>
+                    <MudText Typo="Typo.caption" Color="Color.Success" Class="mb-4 d-block">
+                        @(_logoFile?.Name ?? "Nenhuma logo selecionada.")
+                    </MudText>
+                     
+                    <MudFileUpload T="IReadOnlyList<IBrowserFile>" @bind-Files="_cardFiles" Accept=".webp" Class="mb-2">
+                        <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.LibraryBooks">
+                            Selecionar Cartas (15x .webp)
+                        </MudButton>
+                    </MudFileUpload>
+                    <MudText Typo="Typo.caption" Color="Color.Success" Class="mb-6 d-block">
+                        @(_cardFiles?.Count > 0 ? $"{_cardFiles.Count} cartas selecionadas." : "Nenhuma carta selecionada.")
+                    </MudText>
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true"
+                               Disabled="@(!_isValid || _logoFile == null || _cardFiles == null || _cardFiles.Count == 0 || _isProcessing)"
+                               OnClick="CreateThemeAsync">
+                        @if (_isProcessing)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ms-2">Salvando...</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Salvar Tema</MudText>
+                        }
+                    </MudButton>
+                </MudForm>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="8">
+            <MudTable Items="@_themes" Dense="true" Hover="true" Loading="@_isLoading" Elevation="3"
+                      CanCancelEdit="true" RowEditCommit="OnRowEditCommit">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Temas Disponíveis</MudText>
+                    <MudSpacer />
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="LoadThemesAsync" />
+                </ToolBarContent>
+
+                <HeaderContent>
+                    <MudTh>Thumbnail Id</MudTh>
+                    <MudTh>Nome</MudTh>
+                    <MudTh>Qtd. Cartas</MudTh>
+                    <MudTh Style="width: 100px; text-align: right;">Ações</MudTh>
+                </HeaderContent>
+
+                <RowTemplate>
+                    <MudTd DataLabel="Thumbnail Id">
+                        <MudText Typo="Typo.caption" Style="font-family: monospace;">
+                            @context.ThumbnailId.Substring(0, Math.Min(8, context.ThumbnailId.Length))...
+                        </MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Nome">@context.Name</MudTd>
+                    <MudTd DataLabel="Cartas">@context.CardCount</MudTd>
+                    <MudTd DataLabel="Ações" Style="text-align: right;">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                       OnClick="@(() => DeleteThemeAsync(context.Id, context.Name))" />
+                    </MudTd>
+                </RowTemplate>
+
+                <RowEditingTemplate>
+                    <MudTd DataLabel="Thumbnail Id">
+                        <MudText Typo="Typo.caption">@context.ThumbnailId</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Nome">
+                        <MudTextField @bind-Value="context.Name" Required="true" />
+                    </MudTd>
+                    <MudTd DataLabel="Cartas">@context.CardCount</MudTd>
+                    <MudTd DataLabel="Ações"></MudTd>
+                </RowEditingTemplate>
+
+                <NoRecordsContent>
+                    <MudText>Nenhum tema encontrado. Crie um novo ao lado!</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private MudForm _form = null!;
+    private bool _isValid;
+    private bool _isLoading = true;
+    private bool _isProcessing = false;
+
+    // Campos do formulário
+    private string _newName = string.Empty;
+    private IBrowserFile? _logoFile;
+    private IReadOnlyList<IBrowserFile>? _cardFiles;
+
+    // Lista de visualização (mutável para permitir edição na grid)
+    private List<ThemeViewModel> _themes = new();
+
+    // Limite de segurança para os streams em memória (ex: 20MB por arquivo, ajustável)
+    private const long MaxFileSize = 20 * 1024 * 1024;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadThemesAsync();
+    }
+
+    private async Task LoadThemesAsync()
+    {
+        _isLoading = true;
+        Application.Common.Responses.Response<IReadOnlyList<Application.Game.Dtos.GameThemeDto>> response;
+        try
+        {
+            var query = new GetGameThemeListQuery();
+            response = await Mediator.Send(query, CancellationToken.None);
+        }
+        catch(Exception e)
+        {
+            Logger.LogError(e, "Error getting game themes: {Message}", e.Message);
+            return;
+        }
+
+        if (response.Succeeded && response.Data != null)
+        {
+            _themes = response.Data.Select(dto => new ThemeViewModel
+            {
+                Id = dto.Id,
+                Name = dto.Name,
+                ThumbnailId = dto.ThumbnailId,
+                CardCount = dto.Cards.Count
+            }).ToList();
+        }
+        else
+        {
+            Snackbar.Add(string.Join(", ", response.Errors), Severity.Error);
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task CreateThemeAsync()
+    {
+        if (_logoFile == null || _cardFiles == null) return;
+
+        _isProcessing = true;
+
+        try
+        {
+            // Abre as streams de leitura.
+            // Em MAUI Blazor Hybrid o arquivo está no próprio aparelho, sendo uma leitura rápida e local.
+            using var logoStream = _logoFile.OpenReadStream(MaxFileSize);
+            
+            var cardStreams = new List<(string Filename, Stream Stream)>();
+            foreach (var file in _cardFiles)
+            {
+                cardStreams.Add((file.Name, file.OpenReadStream(MaxFileSize)));
+            }
+
+            var command = new CreateGameThemeCommand(
+                _newName,
+                logoStream,
+                _logoFile.Name,
+                cardStreams
+            );
+
+            var response = await Mediator.Send(command);
+
+            if (response.Succeeded)
+            {
+                Snackbar.Add("Tema criado com sucesso!", Severity.Success);
+                
+                // reset form
+                _newName = string.Empty;
+                _logoFile = null;
+                _cardFiles = null;
+                await _form.ResetAsync();
+                
+                await LoadThemesAsync();
+            }
+            else
+            {
+                Snackbar.Add(string.Join(", ", response.Errors), Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Falha ao processar arquivos: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private void OnRowEditCommit(object element)
+    {
+        _ = Task.Run(async () => await ProcessRowEditAsync(element));
+    }
+
+    private async Task ProcessRowEditAsync(object element)
+    {
+        if (element is ThemeViewModel themeVm)
+        {
+            var command = new UpdateGameThemeCommand(themeVm.Id, themeVm.Name);
+            var response = await Mediator.Send(command);
+
+            if (response.Succeeded)
+            {
+                Snackbar.Add("Tema atualizado com sucesso!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Erro ao atualizar: {string.Join(", ", response.Errors)}", Severity.Error);
+                await LoadThemesAsync(); // Reverte a alteração na grid recarregando
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteThemeAsync(string id, string name)
+    {
+        var parameters = new DialogParameters<MudMessageBox>
+        {
+            { x => x.Title, "Confirmar Exclusão" },
+            { x => x.Message, $"Tem certeza que deseja excluir o tema '{name}'? Isso removerá as imagens permanentemente." },
+            { x => x.CancelText, "Cancelar" },
+            { x => x.YesText, "Excluir" }
+        };
+
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        
+        var dialog = await DialogService.ShowAsync<MudMessageBox>("Atenção", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled)
+        {
+            var command = new DeleteGameThemeCommand(id);
+            var response = await Mediator.Send(command);
+
+            if (response.Succeeded)
+            {
+                Snackbar.Add("Tema removido com sucesso.", Severity.Success);
+                _themes.RemoveAll(x => x.Id == id);
+            }
+            else
+            {
+                Snackbar.Add(string.Join(", ", response.Errors), Severity.Error);
+            }
+        }
+    }
+ 
+}

@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MemoAna.Application/MemoAna.Application.csproj" />
+    <Project Path="src/MemoAna.Composition/MemoAna.Composition.csproj" />
+    <Project Path="src/MemoAna.Domain/MemoAna.Domain.csproj" />
+    <Project Path="src/MemoAna.Infrastructure/MemoAna.Infrastructure.csproj" />
+    <Project Path="src/MemoAna/MemoAna.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MemoAna.UnitTests/MemoAna.UnitTests.csproj" />
+  </Folder>
+</Solution>

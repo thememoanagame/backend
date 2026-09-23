@@ -1,0 +1,41 @@
+{
+  "platformOptions": {
+    "coverlet": {
+      "include": "[MemoAna]*,[MemoAna.Application]*,[MemoAna.Domain]*,[MemoAna.Infrastructure]*",
+      "exclude": [
+        "[MemoAna.UnitTests]*",
+        "[FluentValidation]*",
+        "[Mediator]*",
+        "[Xunit]*",
+        "[Microsoft.*]*",
+        "[MemoAna]AspNetCoreGeneratedDocument.*",
+        "[MemoAna]MemoAna.Components.*",
+        "[MemoAna]MemoAna.Pages.*",
+        "[MemoAna]MemoAna.Shared.*",
+        "[MemoAna]MemoAna.Layout.*",
+        "[MemoAna]*.Pages.*",
+        "[MemoAna]*.Components.*",
+        "[MemoAna]*.Layout.*",
+        "[MemoAna]*.Shared.*",
+        "[MemoAna]*.App",
+        "[MemoAna]*.Routes"
+      ],
+      "excludeByAttribute": [
+        "GeneratedCodeAttribute",
+        "ExcludeFromCodeCoverageAttribute",
+        "CompilerGeneratedAttribute"
+      ],
+      "excludeByFile": [
+        "**/*.g.cs",
+        "**/*.g.i.cs",
+        "**/*.razor",
+        "**/*.razor.cs",
+        "**/obj/**/*.cs",
+        "**/*LoggerMessage*.cs"
+      ],
+      "format": "cobertura",
+      "includeTestAssembly": false,
+      "excludeAssembliesWithoutSources": "MissingAll"
+    }
+  }
+}
