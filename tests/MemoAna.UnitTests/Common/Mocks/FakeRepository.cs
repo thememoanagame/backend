@@ -8,7 +8,7 @@ namespace MemoAna.UnitTests.Common.Mocks;
 /// <typeparam name="TEntity">The entity type.</typeparam>
 public sealed class FakeRepository<TEntity>
     : IRepository<TEntity>
-    where TEntity : class, IRelationalEntityBase
+    where TEntity : EntityBase, IEntityBase
 {
     private readonly List<TEntity> _entities = [];
 

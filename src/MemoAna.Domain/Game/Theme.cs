@@ -15,7 +15,7 @@ public class Theme(string id = "", string name = "") : EntityBase(id)
     /// <summary>Theme base path.</summary>
     public string ThemeBasePath { get  => $"themes/{Id}"; }
     /// <summary>Thumbnail path.</summary>
-    public string ThumbnailPath { get => $"themes/{Id}/tumbnail/{ThumbnailId}"; }
+    public string ThumbnailBasePath { get => $"{ThemeBasePath}/thumbnail/{ThumbnailId}"; }
     /// <summary>Image cards references from 01.webp to 15.webp) at LiteDB.</summary>
     public List<(string Id, string Name)> Cards { get; set; } = [];
     /// <summary>EF Core navigation.(One theme many rooms)</summary>

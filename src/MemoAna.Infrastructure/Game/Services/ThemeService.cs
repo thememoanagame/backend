@@ -36,7 +36,7 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
             };
 
             // Thumbnail upload
-            await imageRepository.UploadImageAsync($"{theme.ThumbnailId}", logoFilename, logoStream, metadata);
+            await imageRepository.UploadImageAsync($"{theme.ThumbnailBasePath}{logoFilename}", logoFilename, logoStream, metadata);
 
             // Cards upload
             theme.Cards = [];
@@ -45,7 +45,7 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
             foreach (var (filename, stream) in cardStreams)
             {
                 var cardImageId = Guid.CreateVersion7().ToString();
-                await imageRepository.UploadImageAsync(cardImageId, filename, stream, metadata);
+                await imageRepository.UploadImageAsync($"{theme.CardsBasePath}/{cardImageId}/{filename}", filename, stream, metadata);
                 theme.Cards.Add((cardImageId, filename));
             }
 
@@ -111,7 +111,7 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
 
             if (!string.IsNullOrEmpty(theme.ThumbnailId) && !string.IsNullOrWhiteSpace(theme.ThumbnailId))
             {
-                await imageRepository.DeleteImageAsync(theme.ThumbnailPath);
+                await imageRepository.DeleteImageAsync(theme.ThumbnailBasePath);
             }
             else
             {

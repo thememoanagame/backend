@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Itens de Solução/">
+    <File Path=".github/workflows/ci-ct-cd.yml" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/MemoAna.Application/MemoAna.Application.csproj" />
     <Project Path="src/MemoAna.Composition/MemoAna.Composition.csproj" />

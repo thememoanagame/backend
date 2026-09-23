@@ -33,7 +33,7 @@ public class ThemeConfiguration : IEntityTypeConfiguration<Theme>
                .HasMaxLength(1024);
         builder.Ignore(t => t.CardsBasePath);
         builder.Ignore(t => t.ThemeBasePath);
-        builder.Ignore(t => t.ThumbnailPath);
+        builder.Ignore(t => t.ThumbnailBasePath);
         builder.Property(p => p.Cards)
                .IsRequired()
                .HasConversion(

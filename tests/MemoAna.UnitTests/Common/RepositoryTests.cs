@@ -13,14 +13,38 @@ public sealed class RepositoryTests
     public async Task RepositorySupportsCrudListAndMissingEntities()
     {
         await using SQLiteDbContext context = CreateContext();
-        Repository<CardThemeEntity> repository = new(context);
-        CardThemeEntity first = new()
+        Repository<Theme> repository = new(context);
+        Theme first = new()
         {
-            ManifestId = "manifest-1"
+            Name = "theme-1",
+            ThumbnailId = Guid.CreateVersion7().ToString(),
+            Description = "description-1",
+            Cards = new List<(string Id, string Name)>
+            {
+                (Guid.CreateVersion7().ToString(), "card-1"),
+                (Guid.CreateVersion7().ToString(), "card-2")
+            },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            CreatedBy = "test-user",
+            UpdatedBy = "test-user",
+            Id = Guid.CreateVersion7().ToString()
         };
-        CardThemeEntity second = new()
+        Theme second = new()
         {
-            ManifestId = "manifest-2"
+            Name = "theme-2",
+            ThumbnailId = Guid.CreateVersion7().ToString(),
+            Description = "description-2",
+            Cards = new List<(string Id, string Name)>
+            {
+                (Guid.CreateVersion7().ToString(), "card-3"),
+                (Guid.CreateVersion7().ToString(), "card-4")
+            },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            CreatedBy = "test-user",
+            UpdatedBy = "test-user",
+            Id = Guid.CreateVersion7().ToString()
         };
 
         await repository.AddAsync(first, TestContext.Current.CancellationToken);
@@ -30,19 +54,19 @@ public sealed class RepositoryTests
         Assert.Equal(first, await repository.GetByIdAsync(first.Id, TestContext.Current.CancellationToken));
         Assert.Equal(2, (await repository.ListAsync(x => true, false, TestContext.Current.CancellationToken)).Count);
 
-        first.ManifestId = "manifest-updated";
+        first.Name = "theme-1-updated";
         Assert.True(await repository.UpdateAsync(first, TestContext.Current.CancellationToken));
         _ = await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Assert.Equal(
-            "manifest-updated",
-            (await repository.GetByIdAsync(first.Id, TestContext.Current.CancellationToken))?.ManifestId);
+            "theme-1-updated",
+            (await repository.GetByIdAsync(first.Id, TestContext.Current.CancellationToken))?.Name);
 
         Assert.True(await repository.RemoveAsync(second.Id, TestContext.Current.CancellationToken));
         _ = await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Assert.Null(await repository.GetByIdAsync(second.Id, TestContext.Current.CancellationToken));
         Assert.False(await repository.RemoveAsync(second.Id, TestContext.Current.CancellationToken));
         Assert.Single(await repository.ListAsync(
-            theme => theme.ManifestId == "manifest-updated", false, TestContext.Current.CancellationToken));
+            theme => theme.ThumbnailId == "manifest-updated", false, TestContext.Current.CancellationToken));
     }
 
     private static SQLiteDbContext CreateContext()

@@ -175,6 +175,9 @@ public sealed class IdentityHandlerTests
                     "key", 10, [], false, false)
                 : null);
 
+        public Task<TokenResponse?> AuthenticateExternalAsync(string loginProvider, string providerKey, CancellationToken cancellationToken)
+            => Task.FromResult(ReturnData ? Token : null);
+
         private static TokenResponse Token =>
             new("Bearer", "access", 900, "refresh");
     }

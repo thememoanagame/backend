@@ -13,6 +13,7 @@ using Mediator;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MemoAna.Infrastructure.Persistence.Contexts;
 
 namespace MemoAna.UnitTests.Common.Fixtures;
 

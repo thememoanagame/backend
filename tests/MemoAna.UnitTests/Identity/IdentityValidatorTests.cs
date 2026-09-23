@@ -196,5 +196,8 @@ public sealed class IdentityValidatorTests
             bool resetRecoveryCodes, bool resetSharedKey,
             bool forgetMachine, CancellationToken cancellationToken) =>
             Task.FromResult<TwoFactorResponse?>(null);
+
+        public Task<TokenResponse?> AuthenticateExternalAsync(string loginProvider, string providerKey, CancellationToken cancellationToken)
+            => Task.FromResult(ReturnData ? Token : null);
     }
 }
