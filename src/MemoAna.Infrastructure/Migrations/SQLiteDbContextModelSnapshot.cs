@@ -142,9 +142,6 @@ namespace MemoAna.Infrastructure.Migrations
                     b.Property<string>("CurrentTurnPlayerId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("CurrentTurnPlayerId1")
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("Difficulty")
                         .HasColumnType("INTEGER");
 
@@ -177,8 +174,6 @@ namespace MemoAna.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CurrentTurnPlayerId1");
 
                     b.HasIndex("ThemeId");
 
@@ -504,7 +499,7 @@ namespace MemoAna.Infrastructure.Migrations
                 {
                     b.HasOne("MemoAna.Domain.Game.Player", "CurrentTurnPlayer")
                         .WithMany()
-                        .HasForeignKey("CurrentTurnPlayerId1");
+                        .HasForeignKey("CurrentTurnPlayerId");
 
                     b.HasOne("MemoAna.Domain.Game.Theme", "Theme")
                         .WithMany("Rooms")
