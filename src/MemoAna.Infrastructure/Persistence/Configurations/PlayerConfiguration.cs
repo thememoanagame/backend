@@ -15,6 +15,7 @@ public sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
         builder.Property(p => p.PeerIdentifier).HasMaxLength(64).IsRequired();
         builder.Property(p => p.Name).HasMaxLength(50).IsRequired();
         builder.Property(p => p.Score).HasDefaultValue(0);
+        builder.Property(p => p.AiMemoryJson).HasMaxLength(8192).IsRequired();
         builder.Property(p => p.MqttUsername).HasMaxLength(128).IsRequired();
         builder.Property(p => p.MqttPasswordHash).HasMaxLength(512).IsRequired();
 
