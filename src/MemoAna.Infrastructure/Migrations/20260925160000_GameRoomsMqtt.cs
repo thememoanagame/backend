@@ -8,6 +8,18 @@ public partial class GameRoomsMqtt : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.DropForeignKey(
+            name: "FK_Rooms_Players_CurrentTurnPlayerId1",
+            table: "Rooms");
+
+        migrationBuilder.DropIndex(
+            name: "IX_Rooms_CurrentTurnPlayerId1",
+            table: "Rooms");
+
+        migrationBuilder.DropColumn(
+            name: "CurrentTurnPlayerId1",
+            table: "Rooms");
+
         migrationBuilder.AddColumn<string>(
             name: "Name",
             table: "Rooms",
@@ -58,10 +70,40 @@ public partial class GameRoomsMqtt : Migration
             table: "Players",
             column: "MqttUsername",
             unique: true);
+
+        migrationBuilder.AddForeignKey(
+            name: "FK_Rooms_Players_CurrentTurnPlayerId",
+            table: "Rooms",
+            column: "CurrentTurnPlayerId",
+            principalTable: "Players",
+            principalColumn: "Id",
+            onDelete: ReferentialAction.SetNull);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.DropForeignKey(
+            name: "FK_Rooms_Players_CurrentTurnPlayerId",
+            table: "Rooms");
+
+        migrationBuilder.AddColumn<string>(
+            name: "CurrentTurnPlayerId1",
+            table: "Rooms",
+            type: "TEXT",
+            nullable: true);
+
+        migrationBuilder.CreateIndex(
+            name: "IX_Rooms_CurrentTurnPlayerId1",
+            table: "Rooms",
+            column: "CurrentTurnPlayerId1");
+
+        migrationBuilder.AddForeignKey(
+            name: "FK_Rooms_Players_CurrentTurnPlayerId1",
+            table: "Rooms",
+            column: "CurrentTurnPlayerId1",
+            principalTable: "Players",
+            principalColumn: "Id");
+
         migrationBuilder.DropIndex(
             name: "IX_UQ_Players_MqttUsername",
             table: "Players");
