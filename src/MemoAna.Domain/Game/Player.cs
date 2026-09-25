@@ -9,12 +9,11 @@ public class Player(string id = "", string roomId = "") : EntityBase(id)
     public int Score { get; set; }
     public string MqttUsername { get; set; } = string.Empty;
     public string MqttPasswordHash { get; set; } = string.Empty;
-
     public Room? Room { get; set; }
     public bool IsAi { get; set; }
     public int CurrentStreak { get; set; }
     public int Moves { get; set; }
     public int CorrectPairs { get; set; }
     public int Errors { get; set; }
-    public string AiMemoryJson { get; set; }
+    public string AiMemoryJson { get; set; } = string.Empty;
 }
