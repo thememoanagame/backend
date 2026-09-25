@@ -24,6 +24,11 @@ public sealed class RoomConfiguration : IEntityTypeConfiguration<Room>
             .HasMaxLength(20)
             .IsRequired();
 
+        builder.HasOne(r => r.CurrentTurnPlayer)
+            .WithMany()
+            .HasForeignKey(r => r.CurrentTurnPlayerId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasOne(r => r.Theme)
             .WithMany(t => t.Rooms)
             .HasForeignKey(r => r.ThemeId)
