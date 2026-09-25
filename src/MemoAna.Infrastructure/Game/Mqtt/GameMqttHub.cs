@@ -65,7 +65,7 @@ public sealed class GameMqttHub(
         => PublishAsync(
             GameService.GetPlayerTopic(state.RoomId),
             state,
-            retain: false,
+            retain: true,
             cancellationToken);
 
     private async Task ValidateConnectionAsync(ValidatingConnectionEventArgs args)
