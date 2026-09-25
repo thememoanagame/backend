@@ -144,6 +144,9 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
     {
         var room = await LoadRoomAsync(roomId, cancellationToken);
 
+        if (room.Cards.Count(x => x.IsFlipped && !x.IsMatched) >= 2)
+            throw new InvalidOperationException("The current pair is still being resolved.");
+
         if (!room.CanFlipCard(playerId, position))
             throw new InvalidOperationException("The card cannot be selected by the current player.");
 
@@ -201,16 +204,12 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
         return ToActionResult(room, "pair.hidden", false, null);
     }
 
-    private Task<Room> LoadRoomAsync(string roomId, CancellationToken cancellationToken)
-        => db.Rooms
+    private async Task<Room> LoadRoomAsync(string roomId, CancellationToken cancellationToken)
+        => await db.Rooms
             .Include(x => x.Players)
             .Include(x => x.Cards)
             .FirstOrDefaultAsync(x => x.Id == roomId, cancellationToken)
-            .ContinueWith(
-                task => task.Result ?? throw new KeyNotFoundException("Game room was not found."),
-                cancellationToken,
-                TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
+            ?? throw new KeyNotFoundException("Game room was not found.");
 
     private RoomSessionDto CreateSession(
         Room room,
