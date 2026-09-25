@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace MemoAna.Infrastructure.Migrations
+namespace MemoAna.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -216,9 +216,17 @@ namespace MemoAna.Infrastructure.Migrations
                 {
                     Id = table.Column<string>(type: "TEXT", maxLength: 36, nullable: false),
                     RoomId = table.Column<string>(type: "TEXT", nullable: false),
-                    PeerIdentifier = table.Column<string>(type: "TEXT", nullable: false),
+                    PeerIdentifier = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                     Score = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
+                    MqttUsername = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
+                    MqttPasswordHash = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
+                    IsAi = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CurrentStreak = table.Column<int>(type: "INTEGER", nullable: false),
+                    Moves = table.Column<int>(type: "INTEGER", nullable: false),
+                    CorrectPairs = table.Column<int>(type: "INTEGER", nullable: false),
+                    Errors = table.Column<int>(type: "INTEGER", nullable: false),
+                    AiMemoryJson = table.Column<string>(type: "TEXT", maxLength: 8192, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
@@ -233,11 +241,17 @@ namespace MemoAna.Infrastructure.Migrations
                 name: "Rooms",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    Id = table.Column<string>(type: "TEXT", maxLength: 36, nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     ThemeId = table.Column<string>(type: "TEXT", nullable: false),
+                    Difficulty = table.Column<int>(type: "INTEGER", nullable: false),
+                    Mode = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
+                    TimeLimitSeconds = table.Column<int>(type: "INTEGER", nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    RequirePassword = table.Column<bool>(type: "INTEGER", nullable: false),
+                    JoinPasswordHash = table.Column<string>(type: "TEXT", maxLength: 512, nullable: true),
                     Status = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
                     CurrentTurnPlayerId = table.Column<string>(type: "TEXT", nullable: true),
-                    CurrentTurnPlayerId1 = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CreatedBy = table.Column<string>(type: "TEXT", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
@@ -247,10 +261,11 @@ namespace MemoAna.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_Rooms", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Rooms_Players_CurrentTurnPlayerId1",
-                        column: x => x.CurrentTurnPlayerId1,
+                        name: "FK_Rooms_Players_CurrentTurnPlayerId",
+                        column: x => x.CurrentTurnPlayerId,
                         principalTable: "Players",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_Rooms_Themes_ThemeId",
                         column: x => x.ThemeId,
@@ -308,9 +323,15 @@ namespace MemoAna.Infrastructure.Migrations
                 column: "RoomId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Rooms_CurrentTurnPlayerId1",
+                name: "IX_UQ_Players_MqttUsername",
+                table: "Players",
+                column: "MqttUsername",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Rooms_CurrentTurnPlayerId",
                 table: "Rooms",
-                column: "CurrentTurnPlayerId1");
+                column: "CurrentTurnPlayerId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Rooms_ThemeId",

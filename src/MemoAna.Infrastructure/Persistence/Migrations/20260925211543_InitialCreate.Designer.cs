@@ -8,10 +8,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace MemoAna.Infrastructure.Migrations
+namespace MemoAna.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SQLiteDbContext))]
-    [Migration("20260923014151_InitialCreate")]
+    [Migration("20260925211543_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -77,11 +77,41 @@ namespace MemoAna.Infrastructure.Migrations
                         .HasMaxLength(36)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AiMemoryJson")
+                        .IsRequired()
+                        .HasMaxLength(8192)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CorrectPairs")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CurrentStreak")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Errors")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsAi")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Moves")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MqttPasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MqttUsername")
+                        .IsRequired()
+                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -91,6 +121,7 @@ namespace MemoAna.Infrastructure.Migrations
 
                     b.Property<string>("PeerIdentifier")
                         .IsRequired()
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RoomId")
@@ -111,6 +142,10 @@ namespace MemoAna.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("MqttUsername")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UQ_Players_MqttUsername");
+
                     b.HasIndex("RoomId");
 
                     b.ToTable("Players", (string)null);
@@ -119,6 +154,7 @@ namespace MemoAna.Infrastructure.Migrations
             modelBuilder.Entity("MemoAna.Domain.Game.Room", b =>
                 {
                     b.Property<string>("Id")
+                        .HasMaxLength(36)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -131,7 +167,27 @@ namespace MemoAna.Infrastructure.Migrations
                     b.Property<string>("CurrentTurnPlayerId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("CurrentTurnPlayerId1")
+                    b.Property<int>("Difficulty")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("JoinPasswordHash")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequirePassword")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("StartedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Status")
@@ -143,6 +199,9 @@ namespace MemoAna.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("TimeLimitSeconds")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -152,7 +211,7 @@ namespace MemoAna.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CurrentTurnPlayerId1");
+                    b.HasIndex("CurrentTurnPlayerId");
 
                     b.HasIndex("ThemeId");
 
@@ -478,7 +537,8 @@ namespace MemoAna.Infrastructure.Migrations
                 {
                     b.HasOne("MemoAna.Domain.Game.Player", "CurrentTurnPlayer")
                         .WithMany()
-                        .HasForeignKey("CurrentTurnPlayerId1");
+                        .HasForeignKey("CurrentTurnPlayerId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("MemoAna.Domain.Game.Theme", "Theme")
                         .WithMany("Rooms")
