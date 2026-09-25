@@ -81,6 +81,16 @@ namespace MemoAna.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("MqttPasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MqttUsername")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -108,6 +118,10 @@ namespace MemoAna.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("MqttUsername")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UQ_Players_MqttUsername");
+
                     b.HasIndex("RoomId");
 
                     b.ToTable("Players", (string)null);
@@ -130,6 +144,21 @@ namespace MemoAna.Infrastructure.Migrations
 
                     b.Property<string>("CurrentTurnPlayerId1")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Difficulty")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("JoinPasswordHash")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequirePassword")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Status")
                         .IsRequired()
