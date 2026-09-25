@@ -15,7 +15,8 @@ namespace MemoAna.Controllers.v1.Game;
 [Route("api/v1/game/rooms")]
 public sealed class GameRoomController(
     IMediator mediator,
-    IGamePublisher gamePublisher) : ControllerBase
+    IGamePublisher gamePublisher,
+    IGameService gameService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(Response<IReadOnlyList<RoomSummaryDto>>), StatusCodes.Status200OK)]
@@ -35,9 +36,48 @@ public sealed class GameRoomController(
             new CreateRoomCommand(request),
             cancellationToken);
 
-        return response.Succeeded
-            ? StatusCode(StatusCodes.Status201Created, response)
-            : BadRequest(response);
+        if (!response.Succeeded || response.Data is null)
+            return BadRequest(response);
+
+        if (response.Data.Board is not null)
+        {
+            await gamePublisher.PublishRoomStartedAsync(
+                response.Data,
+                cancellationToken);
+        }
+
+        return StatusCode(StatusCodes.Status201Created, response);
+    }
+
+    [HttpGet("{roomId}/cards/{position:int}/image")]
+    [Produces("image/webp", "image/png", "image/jpeg")]
+    [ProducesResponseType<FileStreamResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async ValueTask<IActionResult> GetCardImage(
+        string roomId,
+        int position,
+        [FromQuery] string token,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var file = await gameService.GetCardImageAsync(
+                roomId,
+                position,
+                token,
+                cancellationToken);
+
+            return File(file.Content, file.ContentType);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     [HttpPost("{roomId}/join")]
