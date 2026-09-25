@@ -200,6 +200,16 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
                 logger.LogWarning("Theme '{Id}' not found for update.", id);
                 throw new KeyNotFoundException($"Theme with ID '{id}' not found.");
             }
+
+            var duplicate = await repository.FirstOrDefaultAsync(
+                x => x.Id != id && x.Name == name,
+                cancellationToken: cancellationToken);
+
+            if (duplicate is not null)
+            {
+                throw new InvalidOperationException($"A theme named '{name}' already exists.");
+            }
+
             theme.Name = name;
            var result = await repository.UpdateAsync(theme, cancellationToken);
 
