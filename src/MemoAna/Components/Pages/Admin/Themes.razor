@@ -157,6 +157,8 @@
             return;
 
         _isProcessing = true;
+        var temporaryFiles = new List<string>();
+        var streams = new List<Stream>();
 
         try
         {
@@ -166,40 +168,38 @@
                 return;
             }
 
-            await using var logoStream = _logoFile.OpenReadStream(MaxFileSize);
+            var logoPath = await StageBrowserFileAsync(_logoFile, temporaryFiles);
+            streams.Add(new FileStream(logoPath, FileMode.Open, FileAccess.Read, FileShare.Read));
+
             var cardStreams = new List<(string Filename, Stream Stream)>();
-
-            try
+            foreach (var file in _cardFiles)
             {
-                foreach (var file in _cardFiles)
-                    cardStreams.Add((file.Name, file.OpenReadStream(MaxFileSize)));
-
-                var command = new CreateGameThemeCommand(
-                    _newName,
-                    logoStream,
-                    _logoFile.Name,
-                    cardStreams);
-
-                var response = await Mediator.Send(command);
-
-                if (response.Succeeded)
-                {
-                    Snackbar.Add("Tema criado com sucesso!", Severity.Success);
-                    _newName = string.Empty;
-                    _logoFile = null;
-                    _cardFiles = null;
-                    await _form.ResetAsync();
-                    await LoadThemesAsync();
-                }
-                else
-                {
-                    Snackbar.Add(string.Join(", ", response.Errors), Severity.Error);
-                }
+                var path = await StageBrowserFileAsync(file, temporaryFiles);
+                var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                streams.Add(stream);
+                cardStreams.Add((file.Name, stream));
             }
-            finally
+
+            var command = new CreateGameThemeCommand(
+                _newName,
+                streams[0],
+                _logoFile.Name,
+                cardStreams);
+
+            var response = await Mediator.Send(command);
+
+            if (response.Succeeded)
             {
-                foreach (var (_, stream) in cardStreams)
-                    await stream.DisposeAsync();
+                Snackbar.Add("Tema criado com sucesso!", Severity.Success);
+                _newName = string.Empty;
+                _logoFile = null;
+                _cardFiles = null;
+                await _form.ResetAsync();
+                await LoadThemesAsync();
+            }
+            else
+            {
+                Snackbar.Add(string.Join(", ", response.Errors), Severity.Error);
             }
         }
         catch (Exception ex)
@@ -208,8 +208,41 @@
         }
         finally
         {
+            foreach (var stream in streams)
+                await stream.DisposeAsync();
+
+            foreach (var path in temporaryFiles)
+            {
+                try
+                {
+                    File.Delete(path);
+                }
+                catch
+                {
+                    // Temporary cleanup must not hide the original upload result.
+                }
+            }
+
             _isProcessing = false;
         }
+    }
+
+    private static async Task<string> StageBrowserFileAsync(
+        IBrowserFile file,
+        ICollection<string> temporaryFiles)
+    {
+        var path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        temporaryFiles.Add(path);
+
+        await using var source = file.OpenReadStream(MaxFileSize);
+        await using var destination = new FileStream(
+            path,
+            FileMode.CreateNew,
+            FileAccess.Write,
+            FileShare.None);
+
+        await source.CopyToAsync(destination);
+        return path;
     }
 
     private async Task DeleteThemeAsync(string id, string name)
