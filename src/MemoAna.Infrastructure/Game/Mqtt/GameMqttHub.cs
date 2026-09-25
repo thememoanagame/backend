@@ -171,6 +171,14 @@ public sealed class GameMqttHub(
 
                 await PublishGameStateAsync(resolved, args.CancellationToken);
             }
+
+            if (string.Equals(state.Mode, GameMode.PlayerVsAi.ToString(), StringComparison.Ordinal))
+            {
+                await PublishAutomaticTurnAsync(
+                    roomId,
+                    gameService,
+                    args.CancellationToken);
+            }
         }
         catch (OperationCanceledException) when (args.CancellationToken.IsCancellationRequested)
         {
@@ -196,6 +204,35 @@ public sealed class GameMqttHub(
         finally
         {
             roomLock.Release();
+        }
+    }
+
+    private async Task PublishAutomaticTurnAsync(
+        string roomId,
+        IGameService gameService,
+        CancellationToken cancellationToken)
+    {
+        var states = await gameService.RunAutomaticTurnAsync(
+            roomId,
+            cancellationToken);
+
+        foreach (var state in states)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (state.Event == "pair.hidden")
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(800), cancellationToken);
+            }
+            else if (state.Event == "card.flipped")
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);
+            }
+
+            await PublishGameStateAsync(state, cancellationToken);
+
+            if (state.GameOver)
+                break;
         }
     }
 
