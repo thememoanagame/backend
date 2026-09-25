@@ -11,6 +11,13 @@ public sealed class CreateRoomCommandValidator : AbstractValidator<CreateRoomCom
         RuleFor(x => x.Request.ThemeId).NotEmpty().Must(x => Guid.TryParse(x, out _)).WithErrorCode("422");
         RuleFor(x => x.Request.Difficulty).InclusiveBetween(0, 2).WithErrorCode("422");
         RuleFor(x => x.Request.PlayerName).NotEmpty().MaximumLength(50).WithErrorCode("400");
+        RuleFor(x => x.Request.Mode)
+            .IsInEnum()
+            .WithErrorCode("422");
+        RuleFor(x => x.Request.TimeLimitSeconds)
+            .GreaterThan(0)
+            .When(x => x.Request.Mode == MemoAna.Domain.Game.GameMode.PlayerVsTime)
+            .WithErrorCode("422");
 
         When(x => x.Request.RequirePassword, () =>
             RuleFor(x => x.Request.Password)
