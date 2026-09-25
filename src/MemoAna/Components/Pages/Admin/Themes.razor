@@ -30,7 +30,7 @@
                     </MudText>
 
                     <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true"
-                               Disabled="@(!_isValid || _logoFile == null || _cardFiles == null || _cardFiles.Count != 15 || _isProcessing)"
+                               Disabled="@(!_isValid || _logoFile == null || _cardFiles == null || _cardFiles.Count != RequiredCardCount || _isProcessing)"
                                OnClick="CreateThemeAsync">
                         @if (_isProcessing)
                         {
