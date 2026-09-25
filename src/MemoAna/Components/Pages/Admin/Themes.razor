@@ -68,24 +68,35 @@
                             @context.ThumbnailId.Substring(0, Math.Min(8, context.ThumbnailId.Length))...
                         </MudText>
                     </MudTd>
-                    <MudTd DataLabel="Nome">@context.Name</MudTd>
+                    <MudTd DataLabel="Nome">
+                        @if (_editingThemeId == context.Id)
+                        {
+                            <MudTextField @bind-Value="context.Name" Required="true" Immediate="true" />
+                        }
+                        else
+                        {
+                            @context.Name
+                        }
+                    </MudTd>
                     <MudTd DataLabel="Cartas">@context.CardCount</MudTd>
                     <MudTd DataLabel="Ações" Style="text-align: right;">
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                                       OnClick="@(() => DeleteThemeAsync(context.Id, context.Name))" />
+                        @if (_editingThemeId == context.Id)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small"
+                                           Disabled="@string.IsNullOrWhiteSpace(context.Name)"
+                                           OnClick="@(() => UpdateThemeAsync(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                                           OnClick="@(() => CancelEdit(context))" />
+                        }
+                        else
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                                           OnClick="@(() => BeginEdit(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                           OnClick="@(() => DeleteThemeAsync(context.Id, context.Name))" />
+                        }
                     </MudTd>
                 </RowTemplate>
-
-                <RowEditingTemplate>
-                    <MudTd DataLabel="Thumbnail Id">
-                        <MudText Typo="Typo.caption">@context.ThumbnailId</MudText>
-                    </MudTd>
-                    <MudTd DataLabel="Nome">
-                        <MudTextField @bind-Value="context.Name" Required="true" />
-                    </MudTd>
-                    <MudTd DataLabel="Cartas">@context.CardCount</MudTd>
-                    <MudTd DataLabel="Ações"></MudTd>
-                </RowEditingTemplate>
 
                 <NoRecordsContent>
                     <MudText>Nenhum tema encontrado. Crie um novo ao lado!</MudText>
@@ -243,6 +254,45 @@
 
         await source.CopyToAsync(destination);
         return path;
+    }
+
+    private void BeginEdit(ThemeViewModel theme)
+    {
+        _editingThemeId = theme.Id;
+        _originalThemeName = theme.Name;
+    }
+
+    private void CancelEdit(ThemeViewModel theme)
+    {
+        if (_editingThemeId != theme.Id)
+            return;
+
+        theme.Name = _originalThemeName ?? theme.Name;
+        _editingThemeId = null;
+        _originalThemeName = null;
+    }
+
+    private async Task UpdateThemeAsync(ThemeViewModel theme)
+    {
+        if (_editingThemeId != theme.Id || string.IsNullOrWhiteSpace(theme.Name))
+            return;
+
+        var response = await Mediator.Send(
+            new UpdateGameThemeCommand(theme.Id, theme.Name.Trim()),
+            CancellationToken.None);
+
+        if (response.Succeeded)
+        {
+            theme.Name = response.Data?.Name ?? theme.Name.Trim();
+            Snackbar.Add("Tema atualizado com sucesso.", Severity.Success);
+            _editingThemeId = null;
+            _originalThemeName = null;
+        }
+        else
+        {
+            theme.Name = _originalThemeName ?? theme.Name;
+            Snackbar.Add(string.Join(", ", response.Errors), Severity.Error);
+        }
     }
 
     private async Task DeleteThemeAsync(string id, string name)
