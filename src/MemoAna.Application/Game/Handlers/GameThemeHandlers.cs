@@ -53,9 +53,8 @@ public sealed class GameThemeHandlers(IThemeService themeService)
     /// <inheritdoc />
     public async ValueTask<Response<IReadOnlyList<GameThemeDto>>> Handle(GetGameThemeListQuery request, CancellationToken cancellationToken)
     {
-        return await themeService.FindThemesAsync(x => true, cancellationToken) is IReadOnlyList<GameThemeDto> themes
-            ? Response.Success(themes)
-            : Response.Failure<IReadOnlyList<GameThemeDto>>("No game themes found.");
+        var themes = (await themeService.FindThemesAsync(x => true, cancellationToken)).ToList();
+        return Response.Success<IReadOnlyList<GameThemeDto>>(themes);
     }
 
     /// <inheritdoc />
