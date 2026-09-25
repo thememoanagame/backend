@@ -18,6 +18,8 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
         IEnumerable<(string Filename, Stream Stream)> cardStreams,
         CancellationToken cancellationToken = default)
     {
+        var uploadedImageIds = new List<string>();
+
         try
         {
             Theme theme = new()
@@ -28,37 +30,63 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
                 ThumbnailId = Guid.CreateVersion7().ToString()
             };
 
-            // Common LiteDB metadata
+            var thumbnailStorageId = theme.ThumbnailBasePath;
             var metadata = new Dictionary<string, object>
             {
-                { "ThemeId", theme.Id },
-                { "ThemeName", theme.Name },
-                { "Type", "Logo" },
-                { "Id", theme.ThumbnailId }
+                ["ThemeId"] = theme.Id,
+                ["ThemeName"] = theme.Name,
+                ["Type"] = "Logo",
+                ["Id"] = theme.ThumbnailId
             };
 
-            // Thumbnail upload
-            await imageRepository.UploadImageAsync($"{theme.ThumbnailBasePath}{logoFilename}", logoFilename, logoStream, metadata);
+            await imageRepository.UploadImageAsync(
+                thumbnailStorageId,
+                logoFilename,
+                logoStream,
+                metadata);
+            uploadedImageIds.Add(thumbnailStorageId);
 
-            // Cards upload
-            theme.Cards = [];
             metadata["Type"] = "Card";
 
             foreach (var (filename, stream) in cardStreams)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var cardImageId = Guid.CreateVersion7().ToString();
+                var storageId = $"{theme.CardsBasePath}/{cardImageId}/{filename}";
+
                 metadata["Id"] = cardImageId;
-                await imageRepository.UploadImageAsync($"{theme.CardsBasePath}/{cardImageId}/{filename}", filename, stream, metadata);
+
+                await imageRepository.UploadImageAsync(
+                    storageId,
+                    filename,
+                    stream,
+                    metadata);
+
+                uploadedImageIds.Add(storageId);
                 theme.Cards.Add((cardImageId, filename));
             }
 
-            // 4. Salva no SQLite
             await repository.AddAsync(theme, cancellationToken);
-
             return GameThemeDto.FromTheme(theme);
         }
         catch (Exception e)
         {
+            foreach (var imageId in uploadedImageIds)
+            {
+                try
+                {
+                    await imageRepository.DeleteImageAsync(imageId);
+                }
+                catch (Exception cleanupException)
+                {
+                    logger.LogWarning(
+                        cleanupException,
+                        "Failed to clean up theme image {ImageId} after theme creation failed.",
+                        imageId);
+                }
+            }
+
             logger.LogError(e, "Error adding theme '{Name}': {Message}", name, e.Message);
             throw;
         }
