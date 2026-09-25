@@ -136,6 +136,7 @@ public sealed class GameService(
             MqttPasswordHash = HashSecret(mqttPassword)
         };
 
+        room.Players = existingPlayers.ToList();
         room.AddPlayer(player);
 
         var imageIds = theme.Cards
