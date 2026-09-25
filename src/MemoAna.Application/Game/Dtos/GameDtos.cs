@@ -10,6 +10,19 @@ public sealed record GameThemeDto(
     string ThumbnailId,
     IReadOnlyList<GameThemeCardDto> Cards)
 {
+    public GameThemeDto(
+        string id,
+        string name,
+        string thumbnailId,
+        IReadOnlyList<string> cardNames)
+        : this(
+            id,
+            name,
+            thumbnailId,
+            cardNames.Select(x => new GameThemeCardDto(x)).ToList())
+    {
+    }
+
     public static GameThemeDto FromTheme(Theme theme)
     {
         ArgumentNullException.ThrowIfNull(theme, nameof(theme));
