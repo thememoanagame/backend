@@ -55,7 +55,7 @@ public sealed class GameMqttHub(
                 roomId = session.Room.Id,
                 currentPlayerId = session.Board.CurrentPlayerId
             },
-            retain: false,
+            retain: true,
             cancellationToken);
     }
 
