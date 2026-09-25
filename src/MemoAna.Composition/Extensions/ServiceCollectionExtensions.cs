@@ -273,6 +273,9 @@ public static class ServiceCollectionExtensions
 
         public IServiceCollection ConfigureInfrastructureServices(IConfiguration configuration)
         {
+            _ = services.AddDataProtection()
+                .SetApplicationName("MemoAna");
+
             _ = services.AddScoped<ISqlSeedService, SqlSeedService>();
             _ = services.AddScoped<IThemeService, ThemeService>();
             _ = services.AddScoped<IGameService, GameService>();
