@@ -47,7 +47,7 @@ public static class WebApplicationBuilderExtensions
             _ = builder.ConfigurePresentation(configurePresentationServices);
             _ = builder.Services.ConfigureDatabase(builder.Configuration);
             _ = builder.Services.ConfigureIdentity();
-            _ = builder.Services.ConfigureInfrastructureServices();
+            _ = builder.Services.ConfigureInfrastructureServices(builder.Configuration);
             _ = builder.Services.ConfigureAuth(builder.Configuration);
             _ = builder.Services.ConfigureApplicationServices();
             await builder.Build().RunMemoAnaAsync<TApp>();
