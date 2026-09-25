@@ -20,17 +20,17 @@
                         @(_logoFile?.Name ?? "Nenhuma logo selecionada.")
                     </MudText>
                      
-                    <MudFileUpload T="IReadOnlyList<IBrowserFile>" @bind-Files="_cardFiles" Accept=".webp" Class="mb-2">
+                    <MudFileUpload T="IReadOnlyList<IBrowserFile>" @bind-Files="_cardFiles" Accept=".webp" MaximumFileCount="15" AppendMultipleFiles Class="mb-2">
                         <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.LibraryBooks">
                             Selecionar Cartas (15x .webp)
                         </MudButton>
                     </MudFileUpload>
                     <MudText Typo="Typo.caption" Color="Color.Success" Class="mb-6 d-block">
-                        @(_cardFiles?.Count > 0 ? $"{_cardFiles.Count} cartas selecionadas." : "Nenhuma carta selecionada.")
+                        @(_cardFiles?.Count > 0 ? $"{_cardFiles.Count}/{RequiredCardCount} cartas selecionadas." : $"Nenhuma carta selecionada. Selecione {RequiredCardCount} cartas.")
                     </MudText>
 
                     <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true"
-                               Disabled="@(!_isValid || _logoFile == null || _cardFiles == null || _cardFiles.Count == 0 || _isProcessing)"
+                               Disabled="@(!_isValid || _logoFile == null || _cardFiles == null || _cardFiles.Count != 15 || _isProcessing)"
                                OnClick="CreateThemeAsync">
                         @if (_isProcessing)
                         {
@@ -105,6 +105,7 @@
     private string _newName = string.Empty;
     private IBrowserFile? _logoFile;
     private IReadOnlyList<IBrowserFile>? _cardFiles;
+    private const int RequiredCardCount = 15;
 
     // Lista de visualização (mutável para permitir edição na grid)
     private List<ThemeViewModel> _themes = new();
@@ -152,46 +153,53 @@
 
     private async Task CreateThemeAsync()
     {
-        if (_logoFile == null || _cardFiles == null) return;
+        if (_logoFile == null || _cardFiles == null)
+            return;
 
         _isProcessing = true;
 
         try
         {
-            // Abre as streams de leitura.
-            // Em MAUI Blazor Hybrid o arquivo está no próprio aparelho, sendo uma leitura rápida e local.
-            using var logoStream = _logoFile.OpenReadStream(MaxFileSize);
-            
+            if (_cardFiles.Count != RequiredCardCount)
+            {
+                Snackbar.Add($"A theme must contain exactly {RequiredCardCount} cards.", Severity.Error);
+                return;
+            }
+
+            await using var logoStream = _logoFile.OpenReadStream(MaxFileSize);
             var cardStreams = new List<(string Filename, Stream Stream)>();
-            foreach (var file in _cardFiles)
+
+            try
             {
-                cardStreams.Add((file.Name, file.OpenReadStream(MaxFileSize)));
+                foreach (var file in _cardFiles)
+                    cardStreams.Add((file.Name, file.OpenReadStream(MaxFileSize)));
+
+                var command = new CreateGameThemeCommand(
+                    _newName,
+                    logoStream,
+                    _logoFile.Name,
+                    cardStreams);
+
+                var response = await Mediator.Send(command);
+
+                if (response.Succeeded)
+                {
+                    Snackbar.Add("Tema criado com sucesso!", Severity.Success);
+                    _newName = string.Empty;
+                    _logoFile = null;
+                    _cardFiles = null;
+                    await _form.ResetAsync();
+                    await LoadThemesAsync();
+                }
+                else
+                {
+                    Snackbar.Add(string.Join(", ", response.Errors), Severity.Error);
+                }
             }
-
-            var command = new CreateGameThemeCommand(
-                _newName,
-                logoStream,
-                _logoFile.Name,
-                cardStreams
-            );
-
-            var response = await Mediator.Send(command);
-
-            if (response.Succeeded)
+            finally
             {
-                Snackbar.Add("Tema criado com sucesso!", Severity.Success);
-                
-                // reset form
-                _newName = string.Empty;
-                _logoFile = null;
-                _cardFiles = null;
-                await _form.ResetAsync();
-                
-                await LoadThemesAsync();
-            }
-            else
-            {
-                Snackbar.Add(string.Join(", ", response.Errors), Severity.Error);
+                foreach (var (_, stream) in cardStreams)
+                    await stream.DisposeAsync();
             }
         }
         catch (Exception ex)
@@ -201,32 +209,6 @@
         finally
         {
             _isProcessing = false;
-        }
-    }
-
-    private void OnRowEditCommit(object element)
-    {
-        _ = Task.Run(async () => await ProcessRowEditAsync(element));
-    }
-
-    private async Task ProcessRowEditAsync(object element)
-    {
-        if (element is ThemeViewModel themeVm)
-        {
-            var command = new UpdateGameThemeCommand(themeVm.Id, themeVm.Name);
-            var response = await Mediator.Send(command);
-
-            if (response.Succeeded)
-            {
-                Snackbar.Add("Tema atualizado com sucesso!", Severity.Success);
-            }
-            else
-            {
-                Snackbar.Add($"Erro ao atualizar: {string.Join(", ", response.Errors)}", Severity.Error);
-                await LoadThemesAsync(); // Reverte a alteração na grid recarregando
-            }
-
-            StateHasChanged();
         }
     }
 
