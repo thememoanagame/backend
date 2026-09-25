@@ -14,6 +14,8 @@ using MemoAna.Composition.Authorization;
 using MemoAna.Infrastructure.Common.Repository;
 using MemoAna.Infrastructure.Common.Services;
 using MemoAna.Infrastructure.Common.UnitOfWork;
+using MemoAna.Infrastructure.Game.Options;
+using MemoAna.Infrastructure.Game.Mqtt;
 using MemoAna.Infrastructure.Game.Services;
 using MemoAna.Infrastructure.Identity.Models;
 using MemoAna.Infrastructure.Identity.Options;
@@ -267,11 +269,28 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
-        public IServiceCollection ConfigureInfrastructureServices()
+        public IServiceCollection ConfigureInfrastructureServices(IConfiguration configuration)
         {
             _ = services.AddScoped<ISqlSeedService, SqlSeedService>();
             _ = services.AddScoped<IThemeService, ThemeService>();
+            _ = services.AddScoped<IGameService, GameService>();
             _ = services.AddScoped<IHealthService, HealthService>();
+
+            MqttOptions mqttOptions = configuration
+                .GetSection(MqttOptions.SectionName)
+                .Get<MqttOptions>()
+                ?? new MqttOptions();
+
+            _ = services.AddSingleton(mqttOptions);
+            _ = services.AddHostedMqttServer(options => options
+                .WithDefaultEndpoint()
+                .WithDefaultEndpointPort(mqttOptions.Port)
+                .WithPersistentSessions());
+
+            _ = services.AddSingleton<GameMqttHub>();
+            _ = services.AddSingleton<IGamePublisher>(sp => sp.GetRequiredService<GameMqttHub>());
+            _ = services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<GameMqttHub>());
+
             return services;
         }
 
