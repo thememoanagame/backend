@@ -1,4 +1,5 @@
 using System.Text;
+using System.Collections.Concurrent;
 using System.Text.Json;
 using MemoAna.Application.Common.Abstractions;
 using MQTTnet;
@@ -18,6 +19,7 @@ public sealed class GameMqttHub(
     private MqttServer? server;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private const string ServiceClientId = "memoana-game-service";
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> roomLocks = new(StringComparer.Ordinal);
 
     public void Configure(MqttServer mqttServer)
     {
@@ -140,6 +142,9 @@ public sealed class GameMqttHub(
 
         args.ProcessPublish = false;
 
+        var roomLock = roomLocks.GetOrAdd(roomId, static _ => new SemaphoreSlim(1, 1));
+        await roomLock.WaitAsync(args.CancellationToken);
+
         try
         {
             using var scope = scopeFactory.CreateScope();
@@ -163,6 +168,10 @@ public sealed class GameMqttHub(
 
                 await PublishGameStateAsync(resolved, args.CancellationToken);
             }
+        }
+        finally
+        {
+            roomLock.Release();
         }
         catch (Exception exception)
         {
@@ -211,10 +220,10 @@ public sealed class GameMqttHub(
             .WithRetainFlag(retain)
             .Build();
 
-        if (server is null)
-            throw new InvalidOperationException("The MQTT game hub has not been configured.");
+        var mqttServer = server
+            ?? throw new InvalidOperationException("The MQTT game hub has not been configured.");
 
-        await server.InjectApplicationMessage(
+        await mqttServer.InjectApplicationMessage(
             new InjectedMqttApplicationMessage(message)
             {
                 SenderClientId = ServiceClientId
