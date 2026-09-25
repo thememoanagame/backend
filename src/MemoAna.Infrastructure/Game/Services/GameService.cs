@@ -636,13 +636,15 @@ public sealed class GameService(
         if (memory.TryGetValue(first, out var imageId))
         {
             var partner = memory
-                .FirstOrDefault(x =>
+                .Where(x =>
                     x.Key != first &&
                     available.Contains(x.Key) &&
-                    string.Equals(x.Value, imageId, StringComparison.Ordinal));
+                    string.Equals(x.Value, imageId, StringComparison.Ordinal))
+                .Select(x => (int?)x.Key)
+                .FirstOrDefault();
 
-            if (partner.Key != 0 || (memory.ContainsKey(0) && partner.Key == 0))
-                return partner.Key;
+            if (partner.HasValue)
+                return partner.Value;
         }
 
         var candidates = available.Where(x => x != first).ToArray();
