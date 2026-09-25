@@ -191,8 +191,8 @@ public sealed class GameService(
             tracking: true,
             cancellationToken: cancellationToken);
 
-        room.Players = players;
-        room.Cards = cards;
+        room.Players = [.. players];
+        room.Cards = [.. cards];
 
         if (cards.Count(x => x.IsFlipped && !x.IsMatched) >= 2)
             throw new InvalidOperationException("The current pair is still being resolved.");
@@ -254,8 +254,8 @@ public sealed class GameService(
             x => x.RoomId == roomId,
             cancellationToken: cancellationToken);
 
-        room.Players = players;
-        room.Cards = cards;
+        room.Players = [.. players];
+        room.Cards = [.. cards];
 
         foreach (var card in cards.Where(x => x.IsFlipped && !x.IsMatched))
             card.IsFlipped = false;

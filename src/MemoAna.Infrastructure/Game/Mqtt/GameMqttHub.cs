@@ -8,6 +8,9 @@ using MemoAna.Application.Game.Abstractions;
 using MemoAna.Domain.Game;
 using MemoAna.Application.Game.Dtos;
 using MemoAna.Infrastructure.Game.Services;
+using Microsoft.Extensions.Logging;
+using System.Buffers;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MemoAna.Infrastructure.Game.Mqtt;
 
@@ -153,7 +156,7 @@ public sealed class GameMqttHub(
             var state = await gameService.SelectCardAsync(
                 roomId,
                 args.SessionItems["PlayerId"]?.ToString() ?? string.Empty,
-                action.Position.Value,
+                action.Position!.Value,
                 args.CancellationToken);
 
             await PublishGameStateAsync(state, args.CancellationToken);
