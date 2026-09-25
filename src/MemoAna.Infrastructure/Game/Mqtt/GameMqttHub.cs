@@ -13,27 +13,24 @@ namespace MemoAna.Infrastructure.Game.Mqtt;
 
 /// <summary>Hosts the MQTT game hub and enforces room-scoped transport authorization.</summary>
 public sealed class GameMqttHub(
-    MqttServer server,
     IServiceScopeFactory scopeFactory,
-    ILogger<GameMqttHub> logger) : IGamePublisher, IHostedService
+    ILogger<GameMqttHub> logger) : IGamePublisher
 {
+    private MqttServer? server;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private const string ServiceClientId = "memoana-game-service";
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public void Configure(MqttServer mqttServer)
     {
+        ArgumentNullException.ThrowIfNull(mqttServer);
+
+        if (server is not null)
+            throw new InvalidOperationException("The MQTT game hub has already been configured.");
+
+        server = mqttServer;
         server.ValidatingConnectionAsync += ValidateConnectionAsync;
         server.InterceptingSubscriptionAsync += InterceptSubscriptionAsync;
         server.InterceptingPublishAsync += InterceptPublishAsync;
-        return Task.CompletedTask;
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        server.ValidatingConnectionAsync -= ValidateConnectionAsync;
-        server.InterceptingSubscriptionAsync -= InterceptSubscriptionAsync;
-        server.InterceptingPublishAsync -= InterceptPublishAsync;
-        return Task.CompletedTask;
     }
 
     public async Task PublishRoomStartedAsync(
@@ -214,6 +211,9 @@ public sealed class GameMqttHub(
             .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
             .WithRetainFlag(retain)
             .Build();
+
+        if (server is null)
+            throw new InvalidOperationException("The MQTT game hub has not been configured.");
 
         await server.InjectApplicationMessage(
             new InjectedMqttApplicationMessage(message)
