@@ -169,10 +169,6 @@ public sealed class GameMqttHub(
                 await PublishGameStateAsync(resolved, args.CancellationToken);
             }
         }
-        finally
-        {
-            roomLock.Release();
-        }
         catch (Exception exception)
         {
             logger.LogWarning(
@@ -189,6 +185,10 @@ public sealed class GameMqttHub(
                 },
                 retain: false,
                 args.CancellationToken);
+        }
+        finally
+        {
+            roomLock.Release();
         }
     }
 
