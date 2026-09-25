@@ -224,6 +224,8 @@ public sealed class GameMqttHub(
             .WithRetainFlag(retain)
             .Build();
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         var mqttServer = server
             ?? throw new InvalidOperationException("The MQTT game hub has not been configured.");
 
