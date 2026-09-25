@@ -11,6 +11,7 @@ namespace MemoAna.UnitTests.Game;
 internal sealed class FakeGameThemeService : IThemeService
 {
     public GameThemeDto? ReturnData { get; set; } = new("themeId", "themeName", "thumbId", ["image01Id", "image02Id"]);
+    public GameThemeCardsDto CardsReturnData { get; set; } = new([new("card-1-id", "card-1"),new("card-2-id", "card-2"),new("card-3-id", "card-3")]);
     public Task<GameThemeDto> AddThemeAsync(string name, Stream logoStream, string logoFilename, IEnumerable<(string Filename, Stream Stream)> cardStreams, CancellationToken cancellationToken = default) =>
         Task.FromResult(ReturnData!);
 
@@ -19,7 +20,12 @@ internal sealed class FakeGameThemeService : IThemeService
 
     public Task<IEnumerable<GameThemeDto>> FindThemesAsync(Expression<Func<Theme, bool>> predicate, CancellationToken cancellationToken = default) =>
         Task.FromResult<IEnumerable<GameThemeDto>>([ReturnData!]);
-        
+
+    public Task<FileDto?> GetThemeImageByIdAsync(string themeId, string cardId, CancellationToken cancellationToken = default)
+        => Task.FromResult<FileDto?>(new FileDto(new MemoryStream(), "image/png"));
+
+    public Task<GameThemeCardsDto?> GetThemeImagesAsync(string themeId, CancellationToken cancellationToken = default)
+        => Task.FromResult<GameThemeCardsDto?>(CardsReturnData);
     public Task<GameThemeDto> UpdateThemeAsync(string id, string name, CancellationToken cancellationToken = default) =>
         Task.FromResult(ReturnData!);
 }

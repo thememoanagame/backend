@@ -20,3 +20,9 @@ public sealed record GameThemeDto(
         );
     }
 }
+ 
+ /// <summary>Dto for files from LiteDB.</summary>
+ /// <param name="Content">Stream of file content</param>
+ /// <param name="ContentType">ContentType of file</param>
+public record FileDto(Stream Content, string ContentType);
+public record FilesDto(IReadOnlyList<FileDto> Files);

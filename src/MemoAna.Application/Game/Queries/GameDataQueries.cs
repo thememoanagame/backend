@@ -15,3 +15,11 @@ public sealed record GetGameThemeByNameQuery(string Name)
 /// <summary>Lists all game themes available to the game.</summary>
 public sealed record GetGameThemeListQuery 
     : IRequest<Response<IReadOnlyList<GameThemeDto>>>;
+
+/// <summary>Seaches the image stream of an specific theme card.</summary>
+public sealed record GetThemeCardsByIdQuery(string ThemeId, string CardId) 
+    : IRequest<Response<FileDto>>;
+
+/// <summary>Retrieves the cards from a theme </summary>
+public sealed record GetGameThemeCardsQuery(string ThemeId)
+    : IRequest<Response<FilesDto>>;

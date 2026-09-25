@@ -1,4 +1,5 @@
-﻿using MemoAna.Application.Common.Abstractions;
+﻿using LiteDB;
+using MemoAna.Application.Common.Abstractions;
 using MemoAna.Application.Game.Abstractions;
 using MemoAna.Application.Game.Dtos;
 using MemoAna.Domain.Game;
@@ -32,7 +33,8 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
             {
                 { "ThemeId", theme.Id },
                 { "ThemeName", theme.Name },
-                { "Type", "Logo" }
+                { "Type", "Logo" },
+                { "Id", theme.ThumbnailId }
             };
 
             // Thumbnail upload
@@ -45,6 +47,7 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
             foreach (var (filename, stream) in cardStreams)
             {
                 var cardImageId = Guid.CreateVersion7().ToString();
+                metadata["Id"] = cardImageId;
                 await imageRepository.UploadImageAsync($"{theme.CardsBasePath}/{cardImageId}/{filename}", filename, stream, metadata);
                 theme.Cards.Add((cardImageId, filename));
             }
@@ -57,32 +60,6 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
         catch (Exception e)
         {
             logger.LogError(e, "Error adding theme '{Name}': {Message}", name, e.Message);
-            throw;
-        }
-    }
-
-    public async Task<GameThemeDto> UpdateThemeAsync(string id, string name, CancellationToken cancellationToken = default)
-    {
-        // Obs: Se a edição de tema permitir alterar as imagens, você deve orquestrar
-        // a exclusão dos IDs antigos no LiteDB e o upload das novas streams aqui.
-        // Para atualizar apenas os metadados (ex: Nome do Tema):
-        try
-        {
-            logger.LogDebug("Updating theme '{Id}' with name '{Name}'", id, name);
-            var theme = await repository.GetByIdAsync(id, cancellationToken);
-            if (theme == null)
-            {
-                logger.LogWarning("Theme '{Id}' not found for update.", id);
-                throw new KeyNotFoundException($"Theme with ID '{id}' not found.");
-            }
-            theme.Name = name;
-           var result = await repository.UpdateAsync(theme, cancellationToken);
-
-            return result ? GameThemeDto.FromTheme(theme) : throw new GameException("Failed to update theme.");
-        }
-        catch (Exception e)
-        {
-            logger.LogError(e, "Error updating theme '{ThemeId}': {Message}", id, e.Message);
             throw;
         }
     }
@@ -132,4 +109,60 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
             throw;
         }
     }
+
+    public async Task<FileDto?> GetThemeImageByIdAsync(string themeId, string cardId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var stream = await imageRepository.GetThemeImageStreamAsync(cardId);
+            return new FileDto(stream,((LiteFileStream<string>)stream).FileInfo.MimeType);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error getting theme image by id: {Message}", e.Message);
+            throw;
+        }
+    }
+
+    public async Task<FilesDto> GetThemeImagesAsync(string themeId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var theme = await repository.GetByIdAsync(themeId, cancellationToken) ?? throw new KeyNotFoundException("Theme not found");
+            var streams = await imageRepository.GetThemeImageStreamsAsync(themeId);
+            return new FilesDto([.. streams.Select(x => new FileDto(x,((LiteFileStream<string>)x).FileInfo.MimeType))]);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error getting theme images: {Message}", e.Message);
+            throw;
+        }
+    }
+
+    public async Task<GameThemeDto> UpdateThemeAsync(string id, string name, CancellationToken cancellationToken = default)
+    {
+        // Obs: Se a edição de tema permitir alterar as imagens, você deve orquestrar
+        // a exclusão dos IDs antigos no LiteDB e o upload das novas streams aqui.
+        // Para atualizar apenas os metadados (ex: Nome do Tema):
+        try
+        {
+            logger.LogDebug("Updating theme '{Id}' with name '{Name}'", id, name);
+            var theme = await repository.GetByIdAsync(id, cancellationToken);
+            if (theme == null)
+            {
+                logger.LogWarning("Theme '{Id}' not found for update.", id);
+                throw new KeyNotFoundException($"Theme with ID '{id}' not found.");
+            }
+            theme.Name = name;
+           var result = await repository.UpdateAsync(theme, cancellationToken);
+
+            return result ? GameThemeDto.FromTheme(theme) : throw new GameException("Failed to update theme.");
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error updating theme '{ThemeId}': {Message}", id, e.Message);
+            throw;
+        }
+    }
+
 }

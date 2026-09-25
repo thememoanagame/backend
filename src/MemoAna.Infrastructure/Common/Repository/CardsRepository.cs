@@ -36,7 +36,7 @@ public class CardsRepository(LiteDbContext liteDbContext, ILogger<CardsRepositor
         {
             try
             {
-                var fileInfo = storage.FindById(imageId) ??
+                var fileInfo = storage.Find(x => x.Metadata["Id"] == imageId).FirstOrDefault() ??
                     throw new CardNotFoundException();
                 return fileInfo.OpenRead();
             }
