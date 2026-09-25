@@ -169,6 +169,10 @@ public sealed class GameMqttHub(
                 await PublishGameStateAsync(resolved, args.CancellationToken);
             }
         }
+        catch (OperationCanceledException) when (args.CancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception exception)
         {
             logger.LogWarning(
