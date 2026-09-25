@@ -36,7 +36,7 @@ public sealed record GameBoardDto(
 
 public sealed record BoardCardDto(
     int Position,
-    string? ImageToken,
+    string? ImageUrl,
     bool IsFlipped,
     bool IsMatched);
 
