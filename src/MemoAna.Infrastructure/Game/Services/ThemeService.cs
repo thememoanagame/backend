@@ -138,12 +138,24 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
         }
     }
 
-    public async Task<FileDto?> GetThemeImageByIdAsync(string themeId, string cardId, CancellationToken cancellationToken = default)
+    public async Task<FileDto?> GetThemeImageByIdAsync(
+        string themeId,
+        string cardId,
+        CancellationToken cancellationToken = default)
     {
         try
         {
+            var theme = await repository.GetByIdAsync(themeId, cancellationToken)
+                ?? throw new KeyNotFoundException("Theme not found.");
+
+            var belongsToTheme = string.Equals(theme.ThumbnailId, cardId, StringComparison.Ordinal)
+                || theme.Cards.Any(card => string.Equals(card.Id, cardId, StringComparison.Ordinal));
+
+            if (!belongsToTheme)
+                throw new KeyNotFoundException("Card does not belong to the specified theme.");
+
             var stream = await imageRepository.GetThemeImageStreamAsync(cardId);
-            return new FileDto(stream,((LiteFileStream<string>)stream).FileInfo.MimeType);
+            return new FileDto(stream, ((LiteFileStream<string>)stream).FileInfo.MimeType);
         }
         catch (Exception e)
         {
