@@ -71,7 +71,7 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
                     metadata);
 
                 uploadedImageIds.Add(storageId);
-                theme.Cards.Add((cardImageId, filename));
+                theme.Cards.Add(new ThemeCard(cardImageId, filename));
             }
 
             await repository.AddAsync(theme, cancellationToken);
@@ -132,7 +132,6 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
 
             for (int i = 0; i < theme.Cards.Count; i++)
             {
-                (string Id, string Name) cardId = theme.Cards[i];
                 await imageRepository.DeleteImageAsync(theme.GetCardsPath(i));
             }
 
