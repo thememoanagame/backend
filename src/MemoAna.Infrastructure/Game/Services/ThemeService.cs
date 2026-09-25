@@ -22,6 +22,13 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
 
         try
         {
+            if (await repository.FirstOrDefaultAsync(
+                    x => x.Name == name,
+                    cancellationToken: cancellationToken) is not null)
+            {
+                throw new InvalidOperationException($"A theme named '{name}' already exists.");
+            }
+
             Theme theme = new()
             {
                 Cards = [],
