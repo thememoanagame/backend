@@ -7,7 +7,6 @@ using MemoAna.Application.Game.Abstractions;
 using MemoAna.Application.Game.Dtos;
 using MemoAna.Application.Game.Requests;
 using MemoAna.Domain.Game;
-using MemoAna.Infrastructure.Common.Repository;
 using MemoAna.Infrastructure.Game.Options;
 
 namespace MemoAna.Infrastructure.Game.Services;
