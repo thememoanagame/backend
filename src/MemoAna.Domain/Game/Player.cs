@@ -1,17 +1,14 @@
-﻿namespace MemoAna.Domain.Game;
+namespace MemoAna.Domain.Game;
 
-/// <summary>Player representation class.</summary>
+/// <summary>Represents a player participating in a game room.</summary>
 public class Player(string id = "", string roomId = "") : EntityBase(id)
 {
-    /// <summary>ID of the room that the player is in.</summary>
     public string RoomId { get; set; } = roomId ?? Guid.CreateVersion7().ToString();
-    /// <summary>ID real do usuário ou ConnectionId.</summary>
     public string PeerIdentifier { get; set; } = string.Empty;
-    /// <summary>Player Name.</summary>
     public string Name { get; set; } = string.Empty;
-    /// <summary>Player Score.</summary>
     public int Score { get; set; }
+    public string MqttUsername { get; set; } = string.Empty;
+    public string MqttPasswordHash { get; set; } = string.Empty;
 
-    /// <summary>EF Core Navigation.</summary>
     public Room? Room { get; set; }
 }
