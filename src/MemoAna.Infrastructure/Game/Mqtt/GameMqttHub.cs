@@ -1,13 +1,12 @@
 using System.Text;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
+using MemoAna.Application.Common.Abstractions;
 using MQTTnet;
 using MQTTnet.Protocol;
 using MQTTnet.Server;
 using MemoAna.Application.Game.Abstractions;
 using MemoAna.Application.Game.Dtos;
 using MemoAna.Infrastructure.Game.Services;
-using MemoAna.Infrastructure.Persistence.Contexts;
 
 namespace MemoAna.Infrastructure.Game.Mqtt;
 
@@ -77,11 +76,11 @@ public sealed class GameMqttHub(
         }
 
         using var scope = scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<SQLiteDbContext>();
+        var playerRepository = scope.ServiceProvider.GetRequiredService<IRepository<MemoAna.Domain.Game.Player>>();
 
-        var player = await db.Players
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.MqttUsername == args.UserName, args.CancellationToken);
+        var player = await playerRepository.FirstOrDefaultAsync(
+            x => x.MqttUsername == args.UserName,
+            cancellationToken: args.CancellationToken);
 
         if (player is null ||
             !GameService.VerifySecret(args.Password, player.MqttPasswordHash))
