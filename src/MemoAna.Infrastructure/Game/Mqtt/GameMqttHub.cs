@@ -6,6 +6,7 @@ using MQTTnet;
 using MQTTnet.Protocol;
 using MQTTnet.Server;
 using MemoAna.Application.Game.Abstractions;
+using MemoAna.Domain.Game;
 using MemoAna.Application.Game.Dtos;
 using MemoAna.Infrastructure.Game.Services;
 
@@ -78,7 +79,7 @@ public sealed class GameMqttHub(
         }
 
         using var scope = scopeFactory.CreateScope();
-        var playerRepository = scope.ServiceProvider.GetRequiredService<IRepository<MemoAna.Domain.Game.Player>>();
+        var playerRepository = scope.ServiceProvider.GetRequiredService<IRepository<Player>>();
 
         var player = await playerRepository.FirstOrDefaultAsync(
             x => x.MqttUsername == args.UserName,
