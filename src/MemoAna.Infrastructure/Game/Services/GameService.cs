@@ -546,7 +546,7 @@ public sealed class GameService(
                 .Select(x => new BoardCardDto(
                     x.Position,
                     x.IsFlipped || x.IsMatched
-                        ? CreateImageToken(room.Id, x.Position, x.LiteDbImageId)
+                        ? CreateImageUrl(room.Id, x.Position, x.LiteDbImageId)
                         : null,
                     x.IsFlipped,
                     x.IsMatched))
@@ -556,10 +556,14 @@ public sealed class GameService(
             GetRemainingMilliseconds(room),
             message);
 
-    private string CreateImageToken(string roomId, int position, string imageId)
-        => imageTokenProtector.Protect(
+    private string CreateImageUrl(string roomId, int position, string imageId)
+    {
+        var token = imageTokenProtector.Protect(
             JsonSerializer.Serialize(new ImageTokenPayload(roomId, position, imageId)),
             ImageTokenLifetime);
+
+        return $"/api/v1/game/rooms/{roomId}/cards/{position}/image?token={Uri.EscapeDataString(token)}";
+    }
 
     private static long? GetRemainingMilliseconds(Room room)
     {
