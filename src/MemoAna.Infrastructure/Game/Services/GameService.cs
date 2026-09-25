@@ -263,7 +263,7 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
                 .OrderBy(x => x.Position)
                 .Select(x => new BoardCardDto(x.Position, x.LiteDbImageId, x.IsFlipped, x.IsMatched))
                 .ToList(),
-            gameOver || room.Status == GameStatus.Completed,
+            gameOver || room.Status == GameStatus.Finished,
             resolveMismatchAfterDelay,
             message);
 
