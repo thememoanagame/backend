@@ -11,3 +11,16 @@ public sealed record GameDataRequest(
 
 public sealed record CreateGameThemeRequest(
     string ThemeName);
+
+public sealed record CreateRoomRequest(
+    string Name,
+    string ThemeId,
+    int Difficulty,
+    bool RequirePassword,
+    string? Password,
+    string PlayerName);
+
+public sealed record JoinRoomRequest(
+    bool HasPassword,
+    string? Password,
+    string PlayerName);
