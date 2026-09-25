@@ -71,3 +71,10 @@ Expected invalid credentials, duplicate identities, missing users and provider v
 ## Async and resources
 
 All I/O is asynchronous. Cancellation must flow from the HTTP/application boundary into EF Core and provider calls. Dispose resources owned by application code with `using`/`await using`; do not dispose DI-owned services.
+
+
+## Game service transport
+
+The Game feature follows the same Application/Infrastructure separation while adding MQTT as a realtime transport. REST controllers dispatch room commands and queries through Mediator; the Infrastructure game service owns authoritative room state through the existing repository/unit-of-work abstractions. MQTTnet.AspNetCore hosts the broker in the ASP.NET Core process, while GameMqttHub adapts MQTT connection, subscription and publish events to the Application game service.
+
+The MQTT hub is configured on the built application before host startup so authentication and topic authorization are active before the broker accepts clients. MQTT credentials are generated per player and only password hashes are persisted.
