@@ -78,3 +78,10 @@ All I/O is asynchronous. Cancellation must flow from the HTTP/application bounda
 The Game feature follows the same Application/Infrastructure separation while adding MQTT as a realtime transport. REST controllers dispatch room commands and queries through Mediator; the Infrastructure game service owns authoritative room state through the existing repository/unit-of-work abstractions. MQTTnet.AspNetCore hosts the broker in the ASP.NET Core process, while GameMqttHub adapts MQTT connection, subscription and publish events to the Application game service.
 
 The MQTT hub is configured on the built application before host startup so authentication and topic authorization are active before the broker accepts clients. MQTT credentials are generated per player and only password hashes are persisted.
+
+
+### Authoritative game modes and image security
+
+The game engine supports PlayerVsTime, PlayerVsAi and PlayerVsPlayer. Room mode, timer, turn, board composition, pair matching, score/streak/statistics, AI decisions and completion are server-owned state. The MAUI client sends only a card position through the MQTT player topic.
+
+LiteDB image identifiers are never part of a public theme response or board payload. Hidden board positions contain no image reference. When a card is revealed, the server emits a short-lived protected image token. The room-scoped image endpoint validates that token against the current room/card state before opening the LiteDB stream. This prevents enumerating the theme catalog to pre-download all gameplay cards by their persistent LiteDB identifiers.
