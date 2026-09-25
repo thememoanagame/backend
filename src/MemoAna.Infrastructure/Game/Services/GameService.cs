@@ -86,10 +86,10 @@ public sealed class GameService(
             await CreateBoardAsync(room, theme, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
-            room.Players = await playerRepository.ListAsync(
+            room.Players = [.. await playerRepository.ListAsync(
                 x => x.RoomId == room.Id,
                 tracking: true,
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken)];
 
             room.StartGame(player.Id);
             await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -122,7 +122,7 @@ public sealed class GameService(
             .GroupBy(x => x.RoomId)
             .ToDictionary(x => x.Key, x => x.Count());
 
-        return rooms
+        return [.. rooms
             .OrderBy(x => x.CreatedAt)
             .Select(x => new RoomSummaryDto(
                 x.Id,
@@ -133,8 +133,7 @@ public sealed class GameService(
                 x.Status.ToString(),
                 x.RequirePassword,
                 counts.GetValueOrDefault(x.Id),
-                x.TimeLimitSeconds))
-            .ToList();
+                x.TimeLimitSeconds))];
     }
 
     public async Task<RoomSessionDto> JoinRoomAsync(
@@ -169,7 +168,7 @@ public sealed class GameService(
         var mqttPassword = GenerateSecret();
         var player = CreatePlayer(room.Id, Guid.CreateVersion7().ToString(), request.PlayerName, mqttPassword);
 
-        room.Players = existingPlayers.ToList();
+        room.Players = [.. existingPlayers];
         room.AddPlayer(player);
 
         await playerRepository.AddAsync(player, cancellationToken);
@@ -508,14 +507,13 @@ public sealed class GameService(
             room.Id,
             room.ThemeId,
             room.Mode.ToString(),
-            cards
+            [.. cards
                 .OrderBy(x => x.Position)
                 .Select(x => new BoardCardDto(
                     x.Position,
                     null,
                     false,
-                    false))
-                .ToList(),
+                    false))],
             room.CurrentTurnPlayerId ?? string.Empty,
             GetRemainingMilliseconds(room));
 
@@ -532,7 +530,7 @@ public sealed class GameService(
             eventName,
             room.Mode.ToString(),
             room.CurrentTurnPlayerId ?? string.Empty,
-            players.Select(x => new PlayerScoreDto(
+            [.. players.Select(x => new PlayerScoreDto(
                 x.Id,
                 x.Name,
                 x.IsAi,
@@ -540,8 +538,8 @@ public sealed class GameService(
                 x.CorrectPairs,
                 x.Errors,
                 x.Moves,
-                x.CurrentStreak)).ToList(),
-            cards
+                x.CurrentStreak))],
+            [.. cards
                 .OrderBy(x => x.Position)
                 .Select(x => new BoardCardDto(
                     x.Position,
@@ -549,8 +547,7 @@ public sealed class GameService(
                         ? CreateImageUrl(room.Id, x.Position, x.LiteDbImageId)
                         : null,
                     x.IsFlipped,
-                    x.IsMatched))
-                .ToList(),
+                    x.IsMatched))],
             gameOver || room.Status == GameStatus.Finished,
             resolveMismatchAfterDelay,
             GetRemainingMilliseconds(room),

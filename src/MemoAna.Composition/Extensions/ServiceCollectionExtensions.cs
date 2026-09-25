@@ -34,6 +34,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
 using MQTTnet.AspNetCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace MemoAna.Composition.Extensions;
 
