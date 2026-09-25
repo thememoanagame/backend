@@ -75,17 +75,16 @@ public sealed class GameService(
                 {
                     PeerIdentifier = Guid.CreateVersion7().ToString("N"),
                     Name = "IA",
-                    IsAi = true
+                    IsAi = true,
+                    MqttUsername = $"ai-{roomId}-{Guid.CreateVersion7():N}",
+                    MqttPasswordHash = HashSecret(GenerateSecret())
                 };
 
                 await playerRepository.AddAsync(ai, cancellationToken);
             }
 
-            room.Players = request.Mode == GameMode.PlayerVsAi
-                ? [player, new Player { Id = "pending-ai" }]
-                : [player];
-
             await CreateBoardAsync(room, theme, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
 
             room.Players = await playerRepository.ListAsync(
                 x => x.RoomId == room.Id,
@@ -93,6 +92,7 @@ public sealed class GameService(
                 cancellationToken: cancellationToken);
 
             room.StartGame(player.Id);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
         var board = request.Mode == GameMode.PlayerVsPlayer
@@ -174,12 +174,14 @@ public sealed class GameService(
 
         await playerRepository.AddAsync(player, cancellationToken);
         await CreateBoardAsync(room, theme, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var allPlayers = existingPlayers.Append(player).ToList();
         room.Players = allPlayers;
 
         var startingPlayer = allPlayers[RandomNumberGenerator.GetInt32(allPlayers.Count)];
         room.StartGame(startingPlayer.Id);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var board = await BuildBoardAsync(room, cancellationToken);
         return CreateSession(room, player, mqttPassword, board, allPlayers.Count);
@@ -614,15 +616,16 @@ public sealed class GameService(
         IReadOnlyCollection<int> available,
         IReadOnlyDictionary<int, string> memory)
     {
-        var knownPair = memory
+        var knownPairPosition = memory
             .Where(x => available.Contains(x.Key))
             .GroupBy(x => x.Value, StringComparer.Ordinal)
-            .SelectMany(x => x.Count() >= 2 ? x.Take(2) : [])
+            .Where(x => x.Count() >= 2)
+            .SelectMany(x => x.Take(2))
+            .Select(x => (int?)x.Key)
             .FirstOrDefault();
 
-        return knownPair.Key is not null
-            ? knownPair.Position
-            : available.ElementAt(RandomNumberGenerator.GetInt32(available.Count));
+        return knownPairPosition ??
+               available.ElementAt(RandomNumberGenerator.GetInt32(available.Count));
     }
 
     private static int ChooseAiPartnerPosition(
