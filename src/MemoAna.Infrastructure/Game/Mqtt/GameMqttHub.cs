@@ -1,0 +1,226 @@
+using System.Text;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using MQTTnet;
+using MQTTnet.Protocol;
+using MQTTnet.Server;
+using MemoAna.Application.Game.Abstractions;
+using MemoAna.Application.Game.Dtos;
+using MemoAna.Infrastructure.Game.Services;
+using MemoAna.Infrastructure.Persistence.Contexts;
+
+namespace MemoAna.Infrastructure.Game.Mqtt;
+
+/// <summary>Hosts the MQTT game hub and enforces room-scoped transport authorization.</summary>
+public sealed class GameMqttHub(
+    MqttServer server,
+    IServiceScopeFactory scopeFactory,
+    ILogger<GameMqttHub> logger) : IGamePublisher, IHostedService
+{
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private const string ServiceClientId = "memoana-game-service";
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        server.ValidatingConnectionAsync += ValidateConnectionAsync;
+        server.InterceptingSubscriptionAsync += InterceptSubscriptionAsync;
+        server.InterceptingPublishAsync += InterceptPublishAsync;
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        server.ValidatingConnectionAsync -= ValidateConnectionAsync;
+        server.InterceptingSubscriptionAsync -= InterceptSubscriptionAsync;
+        server.InterceptingPublishAsync -= InterceptPublishAsync;
+        return Task.CompletedTask;
+    }
+
+    public async Task PublishRoomStartedAsync(
+        RoomSessionDto session,
+        CancellationToken cancellationToken = default)
+    {
+        if (session.Board is null)
+            return;
+
+        await PublishAsync(
+            GameService.GetBoardTopic(session.Room.Id),
+            session.Board,
+            retain: true,
+            cancellationToken);
+
+        await PublishAsync(
+            GameService.GetPlayerTopic(session.Room.Id),
+            new
+            {
+                @event = "game.started",
+                roomId = session.Room.Id,
+                currentPlayerId = session.Board.CurrentPlayerId
+            },
+            retain: false,
+            cancellationToken);
+    }
+
+    public Task PublishGameStateAsync(
+        GameActionResultDto state,
+        CancellationToken cancellationToken = default)
+        => PublishAsync(
+            GameService.GetPlayerTopic(state.RoomId),
+            state,
+            retain: false,
+            cancellationToken);
+
+    private async Task ValidateConnectionAsync(ValidatingConnectionEventArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.UserName) ||
+            string.IsNullOrWhiteSpace(args.Password))
+        {
+            args.ReasonCode = MqttConnectReasonCode.BadUserNameOrPassword;
+            return;
+        }
+
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<SQLiteDbContext>();
+
+        var player = await db.Players
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.MqttUsername == args.UserName, args.CancellationToken);
+
+        if (player is null ||
+            !GameService.VerifySecret(args.Password, player.MqttPasswordHash))
+        {
+            args.ReasonCode = MqttConnectReasonCode.BadUserNameOrPassword;
+            return;
+        }
+
+        args.SessionItems["PlayerId"] = player.Id;
+        args.SessionItems["RoomId"] = player.RoomId;
+    }
+
+    private Task InterceptSubscriptionAsync(InterceptingSubscriptionEventArgs args)
+    {
+        if (!TryGetSessionRoom(args.SessionItems, out var roomId) ||
+            !IsRoomTopic(args.TopicFilter.Topic, roomId))
+        {
+            args.Response.ReasonCode = MqttSubscribeReasonCode.NotAuthorized;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task InterceptPublishAsync(InterceptingPublishEventArgs args)
+    {
+        if (!TryGetSessionRoom(args.SessionItems, out var roomId) ||
+            !string.Equals(
+                args.ApplicationMessage.Topic,
+                GameService.GetPlayerTopic(roomId),
+                StringComparison.Ordinal))
+        {
+            args.ProcessPublish = false;
+            args.Response.ReasonCode = MqttPubAckReasonCode.NotAuthorized;
+            return;
+        }
+
+        PlayerAction? action;
+        try
+        {
+            action = JsonSerializer.Deserialize<PlayerAction>(
+                args.ApplicationMessage.Payload.ToArray(),
+                JsonOptions);
+        }
+        catch (JsonException)
+        {
+            action = null;
+        }
+
+        if (action is null ||
+            !string.Equals(action.Action, "card.select", StringComparison.OrdinalIgnoreCase) ||
+            action.Position is < 0 or > 29)
+        {
+            args.ProcessPublish = false;
+            args.Response.ReasonCode = MqttPubAckReasonCode.MalformedPacket;
+            return;
+        }
+
+        args.ProcessPublish = false;
+
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var gameService = scope.ServiceProvider.GetRequiredService<IGameService>();
+
+            var state = await gameService.SelectCardAsync(
+                roomId,
+                args.SessionItems["PlayerId"]?.ToString() ?? string.Empty,
+                action.Position.Value,
+                args.CancellationToken);
+
+            await PublishGameStateAsync(state, args.CancellationToken);
+
+            if (state.ResolveMismatchAfterDelay)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(800), args.CancellationToken);
+
+                var resolved = await gameService.ResolveMismatchAsync(
+                    roomId,
+                    args.CancellationToken);
+
+                await PublishGameStateAsync(resolved, args.CancellationToken);
+            }
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Rejected MQTT game action from client {ClientId}.",
+                args.ClientId);
+
+            await PublishAsync(
+                GameService.GetPlayerTopic(roomId),
+                new
+                {
+                    @event = "error",
+                    message = exception.Message
+                },
+                retain: false,
+                args.CancellationToken);
+        }
+    }
+
+    private static bool TryGetSessionRoom(
+        System.Collections.IDictionary sessionItems,
+        out string roomId)
+    {
+        roomId = sessionItems["RoomId"]?.ToString() ?? string.Empty;
+        return Guid.TryParse(roomId, out _);
+    }
+
+    private static bool IsRoomTopic(string topicFilter, string roomId)
+    {
+        var prefix = $"/rooms/{roomId}/";
+        return topicFilter.StartsWith(prefix, StringComparison.Ordinal) &&
+               topicFilter[prefix.Length..] is "board" or "player" or "#";
+    }
+
+    private async Task PublishAsync<T>(
+        string topic,
+        T payload,
+        bool retain,
+        CancellationToken cancellationToken)
+    {
+        var message = new MqttApplicationMessageBuilder()
+            .WithTopic(topic)
+            .WithPayload(JsonSerializer.Serialize(payload, JsonOptions))
+            .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
+            .WithRetainFlag(retain)
+            .Build();
+
+        await server.InjectApplicationMessage(
+            new InjectedMqttApplicationMessage(message)
+            {
+                SenderClientId = ServiceClientId
+            });
+    }
+
+    private sealed record PlayerAction(string Action, int? Position);
+}
