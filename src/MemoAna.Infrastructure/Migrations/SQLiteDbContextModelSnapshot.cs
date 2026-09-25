@@ -81,10 +81,30 @@ namespace MemoAna.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AiMemoryJson")
+                        .IsRequired()
+                        .HasMaxLength(8192)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CorrectPairs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CurrentStreak")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Errors")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsAi")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("MqttPasswordHash")
                         .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Moves")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("MqttUsername")
                         .IsRequired()
@@ -145,6 +165,11 @@ namespace MemoAna.Infrastructure.Migrations
                     b.Property<int>("Difficulty")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("JoinPasswordHash")
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
@@ -155,6 +180,12 @@ namespace MemoAna.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("RequirePassword")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TimeLimitSeconds")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Status")
