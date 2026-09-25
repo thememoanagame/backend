@@ -50,7 +50,7 @@ public class Room : EntityBase
 
     public void CompleteGame()
     {
-        Status = GameStatus.Completed;
+        Status = GameStatus.Finished;
         CurrentTurnPlayerId = null;
     }
 }
