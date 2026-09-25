@@ -1,17 +1,22 @@
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
+using MemoAna.Application.Common.Abstractions;
 using MemoAna.Application.Game.Abstractions;
 using MemoAna.Application.Game.Dtos;
 using MemoAna.Application.Game.Requests;
 using MemoAna.Domain.Game;
-using MemoAna.Infrastructure.Persistence.Contexts;
 using MemoAna.Infrastructure.Game.Options;
 
 namespace MemoAna.Infrastructure.Game.Services;
 
 /// <summary>Implements authoritative room and board operations.</summary>
-public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : IGameService
+public sealed class GameService(
+    IRepository<Room> roomRepository,
+    IRepository<Player> playerRepository,
+    IRepository<Card> cardRepository,
+    IRepository<Theme> themeRepository,
+    IUnitOfWork unitOfWork,
+    MqttOptions mqttOptions) : IGameService
 {
     private const int CardsPerTheme = 15;
 
@@ -19,9 +24,7 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
         CreateRoomRequest request,
         CancellationToken cancellationToken = default)
     {
-        var theme = await db.Themes
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == request.ThemeId, cancellationToken)
+        var theme = await themeRepository.GetByIdAsync(request.ThemeId, cancellationToken)
             ?? throw new KeyNotFoundException("Game theme was not found.");
 
         if (theme.Cards.Count < CardsPerTheme)
@@ -30,6 +33,7 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
         var roomId = Guid.CreateVersion7().ToString();
         var playerId = Guid.CreateVersion7().ToString();
         var mqttPassword = GenerateSecret();
+
         var player = new Player(playerId, roomId)
         {
             PeerIdentifier = Guid.CreateVersion7().ToString("N"),
@@ -49,19 +53,37 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
             Status = GameStatus.WaitingForPlayers
         };
 
-        room.Players.Add(player);
-        db.Rooms.Add(room);
+        await roomRepository.AddAsync(room, cancellationToken);
+        await playerRepository.AddAsync(player, cancellationToken);
 
-        return CreateSession(room, player, mqttPassword, null);
+        return CreateSession(
+            room,
+            player,
+            mqttPassword,
+            board: null,
+            playerCount: 1);
     }
 
     public async Task<IReadOnlyList<RoomSummaryDto>> ListRoomsAsync(
         CancellationToken cancellationToken = default)
     {
-        return await db.Rooms
-            .AsNoTracking()
-            .Where(x => x.Status == GameStatus.WaitingForPlayers)
-            .Include(x => x.Players)
+        var rooms = await roomRepository.ListAsync(
+            x => x.Status == GameStatus.WaitingForPlayers,
+            cancellationToken: cancellationToken);
+
+        if (rooms.Count == 0)
+            return [];
+
+        var roomIds = rooms.Select(x => x.Id).ToHashSet();
+        var players = await playerRepository.ListAsync(
+            x => roomIds.Contains(x.RoomId),
+            cancellationToken: cancellationToken);
+
+        var playerCounts = players
+            .GroupBy(x => x.RoomId)
+            .ToDictionary(x => x.Key, x => x.Count());
+
+        return rooms
             .OrderBy(x => x.CreatedAt)
             .Select(x => new RoomSummaryDto(
                 x.Id,
@@ -70,8 +92,8 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
                 x.Difficulty,
                 x.Status.ToString(),
                 x.RequirePassword,
-                x.Players.Count))
-            .ToListAsync(cancellationToken);
+                playerCounts.GetValueOrDefault(x.Id)))
+            .ToList();
     }
 
     public async Task<RoomSessionDto> JoinRoomAsync(
@@ -79,21 +101,26 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
         JoinRoomRequest request,
         CancellationToken cancellationToken = default)
     {
-        var room = await db.Rooms
-            .Include(x => x.Players)
-            .Include(x => x.Cards)
-            .FirstOrDefaultAsync(x => x.Id == roomId, cancellationToken)
-            ?? throw new KeyNotFoundException("Game room was not found.");
+        var room = await roomRepository.FirstOrDefaultAsync(
+            x => x.Id == roomId,
+            tracking: true,
+            cancellationToken);
 
-        if (room.Status != GameStatus.WaitingForPlayers || room.Players.Count >= 2)
+        if (room is null)
+            throw new KeyNotFoundException("Game room was not found.");
+
+        var existingPlayers = await playerRepository.ListAsync(
+            x => x.RoomId == room.Id,
+            tracking: true,
+            cancellationToken);
+
+        if (room.Status != GameStatus.WaitingForPlayers || existingPlayers.Count >= 2)
             throw new InvalidOperationException("The game room is no longer available.");
 
         if (room.RequirePassword && !VerifySecret(request.Password, room.JoinPasswordHash))
             throw new UnauthorizedAccessException("The room password is invalid.");
 
-        var theme = await db.Themes
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == room.ThemeId, cancellationToken)
+        var theme = await themeRepository.GetByIdAsync(room.ThemeId, cancellationToken)
             ?? throw new KeyNotFoundException("Game theme was not found.");
 
         if (theme.Cards.Count < CardsPerTheme)
@@ -118,22 +145,33 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
 
         RandomNumberGenerator.Shuffle(imageIds);
 
-        room.Cards.Clear();
         for (var position = 0; position < imageIds.Length; position++)
         {
-            room.Cards.Add(new Card(
-                Guid.CreateVersion7().ToString(),
-                room.Id)
-            {
-                Position = position,
-                LiteDbImageId = imageIds[position]
-            });
+            await cardRepository.AddAsync(
+                new Card(Guid.CreateVersion7().ToString(), room.Id)
+                {
+                    Position = position,
+                    LiteDbImageId = imageIds[position]
+                },
+                cancellationToken);
         }
 
-        var startingPlayer = room.Players[RandomNumberGenerator.GetInt32(room.Players.Count)];
+        await playerRepository.AddAsync(player, cancellationToken);
+
+        var allPlayers = existingPlayers.Append(player).ToList();
+        var startingPlayer = allPlayers[RandomNumberGenerator.GetInt32(allPlayers.Count)];
         room.StartGame(startingPlayer.Id);
 
-        return CreateSession(room, player, mqttPassword, ToBoard(room));
+        var cards = await cardRepository.ListAsync(
+            x => x.RoomId == room.Id,
+            cancellationToken: cancellationToken);
+
+        return CreateSession(
+            room,
+            player,
+            mqttPassword,
+            ToBoard(room, cards),
+            allPlayers.Count);
     }
 
     public async Task<GameActionResultDto> SelectCardAsync(
@@ -143,25 +181,36 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
         CancellationToken cancellationToken = default)
     {
         var room = await LoadRoomAsync(roomId, cancellationToken);
+        var cards = await cardRepository.ListAsync(
+            x => x.RoomId == roomId,
+            tracking: true,
+            cancellationToken);
+        var players = await playerRepository.ListAsync(
+            x => x.RoomId == roomId,
+            tracking: true,
+            cancellationToken);
 
-        if (room.Cards.Count(x => x.IsFlipped && !x.IsMatched) >= 2)
+        room.Players = players;
+        room.Cards = cards;
+
+        if (cards.Count(x => x.IsFlipped && !x.IsMatched) >= 2)
             throw new InvalidOperationException("The current pair is still being resolved.");
 
         if (!room.CanFlipCard(playerId, position))
             throw new InvalidOperationException("The card cannot be selected by the current player.");
 
-        var card = room.Cards.First(x => x.Position == position);
+        var card = cards.First(x => x.Position == position);
         card.IsFlipped = true;
 
-        var openCards = room.Cards
+        var openCards = cards
             .Where(x => x.IsFlipped && !x.IsMatched)
             .OrderBy(x => x.Position)
             .ToList();
 
         if (openCards.Count < 2)
         {
-            await db.SaveChangesAsync(cancellationToken);
-            return ToActionResult(room, "card.flipped", false, null);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            return ToActionResult(room, cards, players, "card.flipped", false, null);
         }
 
         var first = openCards[0];
@@ -172,23 +221,23 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
             first.IsMatched = true;
             second.IsMatched = true;
 
-            var player = room.Players.First(x => x.Id == playerId);
+            var player = players.First(x => x.Id == playerId);
             player.Score++;
 
-            if (room.Cards.All(x => x.IsMatched))
+            if (cards.All(x => x.IsMatched))
             {
                 room.CompleteGame();
-                await db.SaveChangesAsync(cancellationToken);
-                return ToActionResult(room, "game.completed", false, null, true);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+                return ToActionResult(room, cards, players, "game.completed", false, null, true);
             }
 
-            await db.SaveChangesAsync(cancellationToken);
-            return ToActionResult(room, "pair.matched", false, null);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            return ToActionResult(room, cards, players, "pair.matched", false, null);
         }
 
-        room.CurrentTurnPlayerId = room.Players.First(x => x.Id != playerId).Id;
-        await db.SaveChangesAsync(cancellationToken);
-        return ToActionResult(room, "pair.mismatched", true, null);
+        room.CurrentTurnPlayerId = players.First(x => x.Id != playerId).Id;
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return ToActionResult(room, cards, players, "pair.mismatched", true, null);
     }
 
     public async Task<GameActionResultDto> ResolveMismatchAsync(
@@ -196,26 +245,39 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
         CancellationToken cancellationToken = default)
     {
         var room = await LoadRoomAsync(roomId, cancellationToken);
+        var cards = await cardRepository.ListAsync(
+            x => x.RoomId == roomId,
+            tracking: true,
+            cancellationToken);
+        var players = await playerRepository.ListAsync(
+            x => x.RoomId == roomId,
+            cancellationToken: cancellationToken);
 
-        foreach (var card in room.Cards.Where(x => x.IsFlipped && !x.IsMatched))
+        room.Players = players;
+        room.Cards = cards;
+
+        foreach (var card in cards.Where(x => x.IsFlipped && !x.IsMatched))
             card.IsFlipped = false;
 
-        await db.SaveChangesAsync(cancellationToken);
-        return ToActionResult(room, "pair.hidden", false, null);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return ToActionResult(room, cards, players, "pair.hidden", false, null);
     }
 
-    private async Task<Room> LoadRoomAsync(string roomId, CancellationToken cancellationToken)
-        => await db.Rooms
-            .Include(x => x.Players)
-            .Include(x => x.Cards)
-            .FirstOrDefaultAsync(x => x.Id == roomId, cancellationToken)
+    private async Task<Room> LoadRoomAsync(
+        string roomId,
+        CancellationToken cancellationToken)
+        => await roomRepository.FirstOrDefaultAsync(
+            x => x.Id == roomId,
+            tracking: true,
+            cancellationToken)
             ?? throw new KeyNotFoundException("Game room was not found.");
 
     private RoomSessionDto CreateSession(
         Room room,
         Player player,
         string mqttPassword,
-        GameBoardDto? board)
+        GameBoardDto? board,
+        int playerCount)
     {
         var summary = new RoomSummaryDto(
             room.Id,
@@ -224,7 +286,7 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
             room.Difficulty,
             room.Status.ToString(),
             room.RequirePassword,
-            room.Players.Count);
+            playerCount);
 
         var credentials = new MqttCredentialsDto(
             mqttOptions.Endpoint,
@@ -238,11 +300,11 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
         return new RoomSessionDto(summary, player.Id, credentials, board);
     }
 
-    private static GameBoardDto ToBoard(Room room)
+    private static GameBoardDto ToBoard(Room room, IReadOnlyList<Card> cards)
         => new(
             room.Id,
             room.ThemeId,
-            room.Cards
+            cards
                 .OrderBy(x => x.Position)
                 .Select(x => new BoardCardDto(x.Position, x.LiteDbImageId, false, false))
                 .ToList(),
@@ -250,6 +312,8 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
 
     private static GameActionResultDto ToActionResult(
         Room room,
+        IReadOnlyList<Card> cards,
+        IReadOnlyList<Player> players,
         string eventName,
         bool resolveMismatchAfterDelay,
         string? message,
@@ -258,8 +322,8 @@ public sealed class GameService(SQLiteDbContext db, MqttOptions mqttOptions) : I
             room.Id,
             eventName,
             room.CurrentTurnPlayerId ?? string.Empty,
-            room.Players.Select(x => new PlayerScoreDto(x.Id, x.Name, x.Score)).ToList(),
-            room.Cards
+            players.Select(x => new PlayerScoreDto(x.Id, x.Name, x.Score)).ToList(),
+            cards
                 .OrderBy(x => x.Position)
                 .Select(x => new BoardCardDto(x.Position, x.LiteDbImageId, x.IsFlipped, x.IsMatched))
                 .ToList(),
