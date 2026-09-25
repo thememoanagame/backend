@@ -8,7 +8,7 @@
             <MudPaper Class="pa-4" Elevation="3">
                 <MudText Typo="Typo.h6" Class="mb-4">Criar Novo Tema</MudText>
 
-                <MudForm @ref="_form" IsValid="@_isValid">
+                <MudForm @ref="_form" @bind-IsValid="_isValid">
                     <MudTextField @bind-Value="_newName" Label="Nome do Tema" Required="true" RequiredError="O nome é obrigatório" Class="mb-4" />
                      
                     <MudFileUpload T="IBrowserFile" @bind-Files="_logoFile" Accept=".webp" Class="mb-2">
