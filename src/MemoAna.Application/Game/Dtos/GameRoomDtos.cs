@@ -14,9 +14,11 @@ public sealed record RoomSummaryDto(
     string Name,
     string ThemeId,
     int Difficulty,
+    string Mode,
     string Status,
     bool RequirePassword,
-    int PlayerCount);
+    int PlayerCount,
+    int TimeLimitSeconds);
 
 public sealed record RoomSessionDto(
     RoomSummaryDto Room,
@@ -27,26 +29,35 @@ public sealed record RoomSessionDto(
 public sealed record GameBoardDto(
     string RoomId,
     string ThemeId,
+    string Mode,
     IReadOnlyList<BoardCardDto> Cards,
-    string CurrentPlayerId);
+    string CurrentPlayerId,
+    long? RemainingMilliseconds);
 
 public sealed record BoardCardDto(
     int Position,
-    string ImageId,
+    string? ImageToken,
     bool IsFlipped,
     bool IsMatched);
 
 public sealed record GameActionResultDto(
     string RoomId,
     string Event,
+    string Mode,
     string CurrentPlayerId,
     IReadOnlyList<PlayerScoreDto> Players,
     IReadOnlyList<BoardCardDto> Cards,
     bool GameOver,
     bool ResolveMismatchAfterDelay,
+    long? RemainingMilliseconds,
     string? Message);
 
 public sealed record PlayerScoreDto(
     string PlayerId,
     string Name,
-    int Score);
+    bool IsAi,
+    int Score,
+    int CorrectPairs,
+    int Errors,
+    int Moves,
+    int CurrentStreak);
