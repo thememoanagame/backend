@@ -104,7 +104,7 @@ public sealed class GameService(
         var room = await roomRepository.FirstOrDefaultAsync(
             x => x.Id == roomId,
             tracking: true,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         if (room is null)
             throw new KeyNotFoundException("Game room was not found.");
@@ -112,7 +112,7 @@ public sealed class GameService(
         var existingPlayers = await playerRepository.ListAsync(
             x => x.RoomId == room.Id,
             tracking: true,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         if (room.Status != GameStatus.WaitingForPlayers || existingPlayers.Count >= 2)
             throw new InvalidOperationException("The game room is no longer available.");
@@ -185,11 +185,11 @@ public sealed class GameService(
         var cards = await cardRepository.ListAsync(
             x => x.RoomId == roomId,
             tracking: true,
-            cancellationToken);
+            cancellationToken: cancellationToken);
         var players = await playerRepository.ListAsync(
             x => x.RoomId == roomId,
             tracking: true,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         room.Players = players;
         room.Cards = cards;
@@ -249,7 +249,7 @@ public sealed class GameService(
         var cards = await cardRepository.ListAsync(
             x => x.RoomId == roomId,
             tracking: true,
-            cancellationToken);
+            cancellationToken: cancellationToken);
         var players = await playerRepository.ListAsync(
             x => x.RoomId == roomId,
             cancellationToken: cancellationToken);
