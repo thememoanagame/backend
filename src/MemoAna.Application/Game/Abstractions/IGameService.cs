@@ -3,7 +3,6 @@ using MemoAna.Application.Game.Requests;
 
 namespace MemoAna.Application.Game.Abstractions;
 
-/// <summary>Provides authoritative multiplayer game operations.</summary>
 public interface IGameService
 {
     Task<RoomSessionDto> CreateRoomAsync(CreateRoomRequest request, CancellationToken cancellationToken = default);
@@ -11,4 +10,6 @@ public interface IGameService
     Task<RoomSessionDto> JoinRoomAsync(string roomId, JoinRoomRequest request, CancellationToken cancellationToken = default);
     Task<GameActionResultDto> SelectCardAsync(string roomId, string playerId, int position, CancellationToken cancellationToken = default);
     Task<GameActionResultDto> ResolveMismatchAsync(string roomId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GameActionResultDto>> RunAutomaticTurnAsync(string roomId, CancellationToken cancellationToken = default);
+    Task<FileDto> GetCardImageAsync(string roomId, int position, string token, CancellationToken cancellationToken = default);
 }
