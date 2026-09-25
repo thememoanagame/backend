@@ -291,7 +291,6 @@ public static class ServiceCollectionExtensions
 
             _ = services.AddSingleton<GameMqttHub>();
             _ = services.AddSingleton<IGamePublisher>(sp => sp.GetRequiredService<GameMqttHub>());
-            _ = services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<GameMqttHub>());
 
             return services;
         }
