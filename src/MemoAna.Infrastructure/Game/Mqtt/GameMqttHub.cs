@@ -138,7 +138,7 @@ public sealed class GameMqttHub(
             action.Position is < 0 or > 29)
         {
             args.ProcessPublish = false;
-            args.Response.ReasonCode = MqttPubAckReasonCode.MalformedPacket;
+            args.Response.ReasonCode = MqttPubAckReasonCode.PayloadFormatInvalid;
             return;
         }
 
