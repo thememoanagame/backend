@@ -15,7 +15,6 @@ namespace MemoAna.Controllers.v1.Game;
 [Route("api/v1/game/rooms")]
 public sealed class GameRoomController(
     IMediator mediator,
-    IGamePublisher gamePublisher,
     IGameService gameService) : ControllerBase
 {
     [HttpGet]
@@ -38,13 +37,6 @@ public sealed class GameRoomController(
 
         if (!response.Succeeded || response.Data is null)
             return BadRequest(response);
-
-        if (response.Data.Board is not null)
-        {
-            await gamePublisher.PublishRoomStartedAsync(
-                response.Data,
-                cancellationToken);
-        }
 
         return StatusCode(StatusCodes.Status201Created, response);
     }
@@ -93,10 +85,6 @@ public sealed class GameRoomController(
 
         if (!response.Succeeded || response.Data is null)
             return BadRequest(response);
-
-        await gamePublisher.PublishRoomStartedAsync(
-            response.Data,
-            cancellationToken);
 
         return Ok(response);
     }
