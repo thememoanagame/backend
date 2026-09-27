@@ -1,14 +1,5 @@
 namespace MemoAna.Application.Game.Dtos;
 
-public sealed record MqttCredentialsDto(
-    string Endpoint,
-    int Port,
-    string ClientId,
-    string Username,
-    string Password,
-    string BoardTopic,
-    string PlayerTopic);
-
 public sealed record RoomSummaryDto(
     string Id,
     string Name,
@@ -23,7 +14,6 @@ public sealed record RoomSummaryDto(
 public sealed record RoomSessionDto(
     RoomSummaryDto Room,
     string PlayerId,
-    MqttCredentialsDto Credentials,
     GameBoardDto? Board);
 
 public sealed record GameBoardDto(
