@@ -85,3 +85,18 @@ The MQTT hub is configured on the built application before host startup so authe
 The game engine supports PlayerVsTime, PlayerVsAi and PlayerVsPlayer. Room mode, timer, turn, board composition, pair matching, score/streak/statistics, AI decisions and completion are server-owned state. The MAUI client sends only a card position through the MQTT player topic.
 
 LiteDB image identifiers are never part of a public theme response or board payload. Hidden board positions contain no image reference. When a card is revealed, the server emits a short-lived protected image token. The room-scoped image endpoint validates that token against the current room/card state before opening the LiteDB stream. This prevents enumerating the theme catalog to pre-download all gameplay cards by their persistent LiteDB identifiers.
+
+
+## Realtime game transport
+
+Game room lifecycle remains REST-based. Realtime gameplay uses the ASP.NET Core SignalR hub at `/hubs/game`, protected by the existing JWT authentication.
+
+The hub is intentionally a transport/orchestration layer. Gameplay rules are implemented behind `IGameModeService`:
+
+- `TimeAttackGameService`
+- `AiGameService`
+- `PvpGameService`
+
+`IGameModeServiceResolver` selects the implementation from the persisted `GameMode`. `IGameRoomExecutionCoordinator` serializes concurrent operations for each room so two client requests cannot mutate the same board simultaneously.
+
+The client never chooses the gameplay service directly and never performs pair matching, scoring, turn changes, AI decisions, timer expiration, or game completion locally.
