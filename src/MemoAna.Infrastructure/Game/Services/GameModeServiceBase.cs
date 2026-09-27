@@ -4,7 +4,7 @@ using MemoAna.Domain.Game;
 
 namespace MemoAna.Infrastructure.Game.Services;
 
-internal abstract class GameModeServiceBase(IGameService gameService) : IGameModeService
+public abstract class GameModeServiceBase(IGameService gameService) : IGameModeService
 {
     public abstract GameMode Mode { get; }
 
