@@ -14,8 +14,7 @@ using MemoAna.Composition.Authorization;
 using MemoAna.Infrastructure.Common.Repository;
 using MemoAna.Infrastructure.Common.Services;
 using MemoAna.Infrastructure.Common.UnitOfWork;
-using MemoAna.Infrastructure.Game.Options;
-using MemoAna.Infrastructure.Game.Mqtt;
+using MemoAna.Infrastructure.Game.SignalR;
 using MemoAna.Infrastructure.Game.Services;
 using MemoAna.Infrastructure.Identity.Models;
 using MemoAna.Infrastructure.Identity.Options;
@@ -32,7 +31,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
-using MQTTnet.AspNetCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.DataProtection;
 
@@ -280,21 +278,13 @@ public static class ServiceCollectionExtensions
             _ = services.AddScoped<ISqlSeedService, SqlSeedService>();
             _ = services.AddScoped<IThemeService, ThemeService>();
             _ = services.AddScoped<IGameService, GameService>();
+            _ = services.AddScoped<IGameModeService, TimeAttackGameService>();
+            _ = services.AddScoped<IGameModeService, AiGameService>();
+            _ = services.AddScoped<IGameModeService, PvpGameService>();
+            _ = services.AddScoped<IGameModeServiceResolver, GameModeServiceResolver>();
+            _ = services.AddSingleton<IGameRoomExecutionCoordinator, GameRoomExecutionCoordinator>();
             _ = services.AddScoped<IHealthService, HealthService>();
-
-            MqttOptions mqttOptions = configuration
-                .GetSection(MqttOptions.SectionName)
-                .Get<MqttOptions>()
-                ?? new MqttOptions();
-
-            _ = services.AddSingleton(mqttOptions);
-            _ = services.AddHostedMqttServer(options => options
-                .WithDefaultEndpoint()
-                .WithDefaultEndpointPort(mqttOptions.Port)
-                .WithPersistentSessions());
-
-            _ = services.AddSingleton<GameMqttHub>();
-            _ = services.AddSingleton<IGamePublisher>(sp => sp.GetRequiredService<GameMqttHub>());
+            _ = services.AddSignalR();
 
             return services;
         }
