@@ -38,11 +38,11 @@ public class ThemeConfiguration : IEntityTypeConfiguration<Theme>
                .IsRequired()
                .HasConversion(
                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)default!),
-                   v => JsonSerializer.Deserialize<List<ThemeCard>>(v, (JsonSerializerOptions)default!) ?? []
+                   v => JsonSerializer.Deserialize<List<ThemeCard>>(v, (JsonSerializerOptions)default!)! 
                )
                .Metadata
                .SetValueComparer(new ValueComparer<List<ThemeCard>>(
-                   (c1, c2) => c1.SequenceEqual(c2),
+                   (c1, c2) => c1!.SequenceEqual(c2!),
                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                    c => c.ToList()
                ));
