@@ -99,24 +99,7 @@ namespace MemoAna.Infrastructure.Persistence.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Moves")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("MqttPasswordHash")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MqttUsername")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PeerIdentifier")
+                        .HasColumnType("INTEGER");                    b.Property<string>("PeerIdentifier")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
@@ -137,12 +120,7 @@ namespace MemoAna.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasKey("Id");
-
-                    b.HasIndex("MqttUsername")
-                        .IsUnique()
-                        .HasDatabaseName("IX_UQ_Players_MqttUsername");
-
+                    b.HasKey("Id");
                     b.HasIndex("RoomId");
 
                     b.ToTable("Players", (string)null);
