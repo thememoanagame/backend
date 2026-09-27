@@ -1,4 +1,3 @@
-using MemoAna.Infrastructure.Game.Mqtt;
 using MemoAna.Infrastructure.Persistence.Contexts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Scalar.AspNetCore;
-using MQTTnet.AspNetCore;
 
 namespace MemoAna.Composition.Extensions;
 /// <summary>WebApplication extension methods class.</summary>
@@ -45,11 +43,9 @@ public static class WebApplicationExtensions
 
             _ = app.MapStaticAssets();
             _ = app.MapControllers();
+            _ = app.MapHub<MemoAna.Infrastructure.Game.SignalR.GameHub>("/hubs/game");
             _ = app.MapRazorComponents<T>()
                 .AddInteractiveServerRenderMode();
-
-            app.UseMqttServer(server =>
-                app.Services.GetRequiredService<GameMqttHub>().Configure(server));
 
             await app.ApplyDatabaseMigrationsAsync();
             await app.RunAsync();
