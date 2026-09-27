@@ -7,8 +7,6 @@ public class Player(string id = "", string roomId = "") : EntityBase(id)
     public string PeerIdentifier { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public int Score { get; set; }
-    public string MqttUsername { get; set; } = string.Empty;
-    public string MqttPasswordHash { get; set; } = string.Empty;
     public Room? Room { get; set; }
     public bool IsAi { get; set; }
     public int CurrentStreak { get; set; }
