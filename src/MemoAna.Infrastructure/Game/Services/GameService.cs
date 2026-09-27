@@ -664,6 +664,19 @@ public sealed class GameService(
             cancellationToken)
             ?? throw new KeyNotFoundException("Game room was not found.");
 
+    private static string HashSecret(string value)
+    {
+        var salt = RandomNumberGenerator.GetBytes(16);
+        var hash = Rfc2898DeriveBytes.Pbkdf2(
+            Encoding.UTF8.GetBytes(value),
+            salt,
+            100_000,
+            HashAlgorithmName.SHA256,
+            32);
+
+        return $"{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
+    }
+
     internal static bool VerifySecret(string? value, string? stored)
     {
         if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(stored))
