@@ -55,9 +55,12 @@ public static class ServiceCollectionExtensions
                     options.ForwardDefaultSelector = context =>
                     {
                         string? authorization = context.Request.Headers.Authorization;
-                        if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                        string? queryToken = context.Request.Query["access_token"];
+                        string? token = !string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                            ? authorization["Bearer ".Length..].Trim()
+                            : queryToken;
+                        if (!string.IsNullOrEmpty(token))
                         {
-                            string token = authorization["Bearer ".Length..].Trim();
                             var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
 
                             if (handler.CanReadToken(token))
@@ -105,6 +108,12 @@ public static class ServiceCollectionExtensions
 
                     options.Events = new JwtBearerEvents
                     {
+                        OnMessageReceived = context =>
+                        {
+                            if (context.Request.Path.StartsWithSegments("/hubs/game"))
+                                context.Token ??= context.Request.Query["access_token"];
+                            return Task.CompletedTask;
+                        },
                         OnAuthenticationFailed = context =>
                         {
                             var logger = context.HttpContext.RequestServices
@@ -183,6 +192,15 @@ public static class ServiceCollectionExtensions
                         ValidateIssuerSigningKey = true,
                         ValidateLifetime = true,
                         ClockSkew = TimeSpan.FromMinutes(5)
+                    };
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            if (context.Request.Path.StartsWithSegments("/hubs/game"))
+                                context.Token ??= context.Request.Query["access_token"];
+                            return Task.CompletedTask;
+                        }
                     };
                 });
 
