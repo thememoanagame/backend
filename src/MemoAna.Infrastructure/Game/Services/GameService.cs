@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 using MemoAna.Application.Common.Abstractions;
@@ -7,7 +6,6 @@ using MemoAna.Application.Game.Abstractions;
 using MemoAna.Application.Game.Dtos;
 using MemoAna.Application.Game.Requests;
 using MemoAna.Domain.Game;
-using MemoAna.Infrastructure.Game.Options;
 
 namespace MemoAna.Infrastructure.Game.Services;
 
@@ -18,7 +16,6 @@ public sealed class GameService(
     IRepository<Theme> themeRepository,
     ICardsRepository imageRepository,
     IUnitOfWork unitOfWork,
-    MqttOptions mqttOptions,
     IDataProtectionProvider dataProtectionProvider) : IGameService
 {
     private const int CardsPerTheme = 15;
@@ -44,9 +41,7 @@ public sealed class GameService(
 
         var roomId = Guid.CreateVersion7().ToString();
         var playerId = Guid.CreateVersion7().ToString();
-        var mqttPassword = GenerateSecret();
-
-        var player = CreatePlayer(roomId, playerId, request.PlayerName, mqttPassword);
+        var player = CreatePlayer(roomId, playerId, request.PlayerName);
         var room = new Room
         {
             Id = roomId,
@@ -76,8 +71,6 @@ public sealed class GameService(
                     PeerIdentifier = Guid.CreateVersion7().ToString("N"),
                     Name = "IA",
                     IsAi = true,
-                    MqttUsername = $"ai-{roomId}-{Guid.CreateVersion7():N}",
-                    MqttPasswordHash = HashSecret(GenerateSecret())
                 };
 
                 await playerRepository.AddAsync(ai, cancellationToken);
@@ -99,7 +92,7 @@ public sealed class GameService(
             ? null
             : await BuildBoardAsync(room, cancellationToken);
 
-        return CreateSession(room, player, mqttPassword, board, request.Mode == GameMode.PlayerVsAi ? 2 : 1);
+        return CreateSession(room, player, board, request.Mode == GameMode.PlayerVsAi ? 2 : 1);
     }
 
     public async Task<IReadOnlyList<RoomSummaryDto>> ListRoomsAsync(
@@ -165,8 +158,7 @@ public sealed class GameService(
             throw new UnauthorizedAccessException("The room password is invalid.");
 
         var theme = await GetValidThemeAsync(room.ThemeId, cancellationToken);
-        var mqttPassword = GenerateSecret();
-        var player = CreatePlayer(room.Id, Guid.CreateVersion7().ToString(), request.PlayerName, mqttPassword);
+        var player = CreatePlayer(room.Id, Guid.CreateVersion7().ToString(), request.PlayerName);
 
         room.Players = [.. existingPlayers];
         room.AddPlayer(player);
@@ -183,7 +175,7 @@ public sealed class GameService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var board = await BuildBoardAsync(room, cancellationToken);
-        return CreateSession(room, player, mqttPassword, board, allPlayers.Count);
+        return CreateSession(room, player, board, allPlayers.Count);
     }
 
     public async Task<GameActionResultDto> SelectCardAsync(
@@ -462,20 +454,16 @@ public sealed class GameService(
     private static Player CreatePlayer(
         string roomId,
         string playerId,
-        string name,
-        string mqttPassword)
+        string name)
         => new(playerId, roomId)
         {
             PeerIdentifier = Guid.CreateVersion7().ToString("N"),
-            Name = name,
-            MqttUsername = $"room-{roomId}-player-{playerId}",
-            MqttPasswordHash = HashSecret(mqttPassword)
+            Name = name
         };
 
-    private RoomSessionDto CreateSession(
+    private static RoomSessionDto CreateSession(
         Room room,
         Player player,
-        string mqttPassword,
         GameBoardDto? board,
         int playerCount)
     {
@@ -490,16 +478,30 @@ public sealed class GameService(
             playerCount,
             room.TimeLimitSeconds);
 
-        var credentials = new MqttCredentialsDto(
-            mqttOptions.Endpoint,
-            mqttOptions.Port,
-            player.PeerIdentifier,
-            player.MqttUsername,
-            mqttPassword,
-            GetBoardTopic(room.Id),
-            GetPlayerTopic(room.Id));
+        return new RoomSessionDto(summary, player.Id, board);
+    }
 
-        return new RoomSessionDto(summary, player.Id, credentials, board);
+    public async Task<GameBoardDto> ConnectGameAsync(
+        string roomId,
+        string playerId,
+        CancellationToken cancellationToken = default)
+    {
+        var room = await LoadRoomAsync(roomId, cancellationToken);
+        var player = await playerRepository.FirstOrDefaultAsync(
+            x => x.Id == playerId && x.RoomId == roomId,
+            cancellationToken: cancellationToken)
+            ?? throw new UnauthorizedAccessException("The player does not belong to the room.");
+
+        _ = player;
+        return await BuildBoardAsync(room, cancellationToken);
+    }
+
+    public async Task<GameMode> GetGameModeAsync(
+        string roomId,
+        CancellationToken cancellationToken = default)
+    {
+        var room = await LoadRoomAsync(roomId, cancellationToken);
+        return room.Mode;
     }
 
     private GameBoardDto ToBoard(Room room, IReadOnlyList<Card> cards)
@@ -660,28 +662,6 @@ public sealed class GameService(
             tracking: true,
             cancellationToken)
             ?? throw new KeyNotFoundException("Game room was not found.");
-
-    internal static string GetBoardTopic(string roomId) => $"/rooms/{roomId}/board";
-    internal static string GetPlayerTopic(string roomId) => $"/rooms/{roomId}/player";
-
-    private static string GenerateSecret()
-        => Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
-            .Replace("+", "-", StringComparison.Ordinal)
-            .Replace("/", "_", StringComparison.Ordinal)
-            .TrimEnd('=');
-
-    private static string HashSecret(string value)
-    {
-        var salt = RandomNumberGenerator.GetBytes(16);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(
-            Encoding.UTF8.GetBytes(value),
-            salt,
-            100_000,
-            HashAlgorithmName.SHA256,
-            32);
-
-        return $"{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
-    }
 
     internal static bool VerifySecret(string? value, string? stored)
     {
