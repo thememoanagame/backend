@@ -2,6 +2,8 @@
 using MemoAna.Application.Common.Responses;
 using MemoAna.Application.Game.Dtos;
 using MemoAna.Application.Game.Queries;
+using MemoAna.Application.Game.Abstractions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,7 +11,7 @@ namespace MemoAna.Controllers.v1.Game;
 
 [Route("api/v1/game/themes")]
 [ApiController]
-public class GameThemeController(IMediator mediator) : ControllerBase
+public class GameThemeController(IMediator mediator, IThemeService themeService) : ControllerBase
 {
     [HttpGet]
     [ResponseCache(Duration = 300)]
@@ -63,3 +65,23 @@ public class GameThemeController(IMediator mediator) : ControllerBase
     }
 
 }
+    /// <summary>Returns a theme card image for the server-rendered theme preview.</summary>
+    [HttpGet("{themeId}/cards/{cardId}/image")]
+    [AllowAnonymous]
+    [ResponseCache(Duration = 300)]
+    [Produces("image/*")]
+    public async Task<IActionResult> GetCardImage(
+        string themeId,
+        string cardId,
+        CancellationToken cancellationToken)
+    {
+        FileDto? file = await themeService.GetThemeImageByIdAsync(
+            themeId,
+            cardId,
+            cancellationToken);
+
+        return file is null
+            ? NotFound()
+            : File(file.Content, file.ContentType);
+    }
+
