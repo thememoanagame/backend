@@ -116,7 +116,7 @@ public static class ServiceCollectionExtensions
                     {
                         OnMessageReceived = context =>
                         {
-                            if (context.Request.Path.StartsWithSegments("/hubs/game"))
+                            if (context.Request.Path.StartsWithSegments("/api/v1/game/hub"))
                                 context.Token ??= context.Request.Query["access_token"];
                             return Task.CompletedTask;
                         },
