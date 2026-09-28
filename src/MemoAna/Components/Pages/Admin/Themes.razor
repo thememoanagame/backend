@@ -1,4 +1,7 @@
 ﻿@page "/themes"
+@attribute [Authorize(Policy = IdentityPolicies.Administrator)]
+@using MemoAna.Application.Common.Authorization
+@using MemoAna.Application.Game.Abstractions
 @inject ILogger<Themes> Logger
 @inject IThemeService ThemeService
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
@@ -76,7 +79,7 @@
                         }
                         else
                         {
-                            @context.Name
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenThemePreviewAsync(context))">@context.Name</MudButton>
                         }
                     </MudTd>
                     <MudTd DataLabel="Cartas">@context.CardCount</MudTd>
