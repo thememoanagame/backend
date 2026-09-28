@@ -1,0 +1,62 @@
+@using MemoAna.Application.Game.Dtos
+
+<MudDialog Style="width:80vw;max-width:80vw;height:80vh;">
+    <TitleContent>
+        <MudText Typo="Typo.h5">@ThemeName</MudText>
+    </TitleContent>
+
+    <DialogContent>
+        @if (CardImageIds.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">No card images are available for this theme.</MudAlert>
+        }
+        else
+        {
+            <MudCarousel T="string"
+                         AutoCycle="false"
+                         ShowArrows="true"
+                         ShowBullets="true"
+                         Class="theme-preview-carousel"
+                         Style="height:70vh;">
+                @foreach (string cardImageId in CardImageIds)
+                {
+                    <MudCarouselItem T="string" Value="@cardImageId">
+                        <div class="d-flex justify-center align-center" style="height:70vh;">
+                            <MudImage Src="@GetImageUrl(cardImageId)"
+                                      Alt="@ThemeName"
+                                      ObjectFit="ObjectFit.Contain"
+                                      Style="max-width:100%;max-height:100%;" />
+                        </div>
+                    </MudCarouselItem>
+                }
+            </MudCarousel>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Close">Fechar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter, EditorRequired]
+    public string ThemeId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string ThemeName { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<string> CardImageIds { get; set; } = [];
+
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Inject]
+    private NavigationManager Navigation { get; set; } = null!;
+
+    private string GetImageUrl(string cardImageId)
+        => Navigation.ToAbsoluteUri(
+            $"api/v1/game/themes/{Uri.EscapeDataString(ThemeId)}/cards/{Uri.EscapeDataString(cardImageId)}/image").ToString();
+
+    private void Close() => MudDialog.Close();
+}
