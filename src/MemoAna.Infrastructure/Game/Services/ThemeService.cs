@@ -114,6 +114,19 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
         }
     }
 
+    public async Task<GameThemePreviewDto?> GetThemePreviewAsync(
+        string themeId,
+        CancellationToken cancellationToken = default)
+    {
+        Theme? theme = await repository.GetByIdAsync(themeId, cancellationToken);
+        return theme is null
+            ? null
+            : new GameThemePreviewDto(
+                theme.Id,
+                theme.Name,
+                theme.Cards.Select(card => card.Id).ToList());
+    }
+
     public async Task<bool> DeleteThemeAsync(string themeId, CancellationToken cancellationToken = default)
     {
         try
@@ -172,9 +185,6 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
 
     public async Task<GameThemeDto> UpdateThemeAsync(string id, string name, CancellationToken cancellationToken = default)
     {
-        // Obs: Se a edição de tema permitir alterar as imagens, você deve orquestrar
-        // a exclusão dos IDs antigos no LiteDB e o upload das novas streams aqui.
-        // Para atualizar apenas os metadados (ex: Nome do Tema):
         try
         {
             logger.LogDebug("Updating theme '{Id}' with name '{Name}'", id, name);
@@ -195,7 +205,7 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
             }
 
             theme.Name = name;
-           var result = await repository.UpdateAsync(theme, cancellationToken);
+            var result = await repository.UpdateAsync(theme, cancellationToken);
 
             return result ? GameThemeDto.FromTheme(theme) : throw new GameException("Failed to update theme.");
         }
@@ -205,5 +215,4 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
             throw;
         }
     }
-
 }
