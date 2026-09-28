@@ -56,8 +56,7 @@ public sealed class SeedGateMiddleware(RequestDelegate next, ILogger<SeedGateMid
 
         if (path.StartsWithSegments("/api/v1/seed")
             || path.StartsWithSegments("/seed")
-            || path.StartsWithSegments("/api/openapi")
-            || path.StartsWithSegments("/api/scalar"))
+            )
         {
             return true;
         }
