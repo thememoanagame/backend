@@ -50,7 +50,7 @@ public static class WebApplicationExtensions
             _ = app.UseAntiforgery();
             _ = app.MapStaticAssets();
             _ = app.MapControllers();
-            _ = app.MapHub<Infrastructure.Game.SignalR.GameHub>("/api/v1/hub/game")
+            _ = app.MapHub<Infrastructure.Game.SignalR.GameHub>("/api/v1/game/hub")
                 .RequireAuthorization(IdentityPolicies.User);
             _ = app.MapRazorComponents<T>()
                 .AddInteractiveServerRenderMode();
