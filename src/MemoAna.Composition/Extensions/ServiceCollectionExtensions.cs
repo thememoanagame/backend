@@ -50,10 +50,16 @@ public static class ServiceCollectionExtensions
                 options.DefaultAuthenticateScheme = "BearerSelector";
                 options.DefaultChallengeScheme = "BearerSelector";
             })
-                .AddPolicyScheme("BearerSelector", "Local or Google JWT", options =>
+                .AddPolicyScheme("BearerSelector", "Local, Google JWT, or Seed Basic", options =>
                 {
                     options.ForwardDefaultSelector = context =>
                     {
+                        if (HttpMethods.IsPost(context.Request.Method)
+                            && context.Request.Path.Equals("/api/v1/seed", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return "SeedBasic";
+                        }
+
                         string? authorization = context.Request.Headers.Authorization;
                         string? queryToken = context.Request.Query["access_token"];
                         string? token = !string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
@@ -202,7 +208,8 @@ public static class ServiceCollectionExtensions
                             return Task.CompletedTask;
                         }
                     };
-                });
+                })
+                .AddScheme<AuthenticationSchemeOptions, SeedBasicAuthenticationHandler>("SeedBasic", _ => { });
 
             _ = services.AddAuthorizationBuilder()
                 .AddPolicy(IdentityPolicies.Administrator, policy => policy
