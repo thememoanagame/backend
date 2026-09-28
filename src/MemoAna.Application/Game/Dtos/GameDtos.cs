@@ -35,5 +35,11 @@ public sealed record GameThemeDto(
     }
 }
 
+/// <summary>Contains the image identifiers required by the server-rendered theme preview.</summary>
+public sealed record GameThemePreviewDto(
+    string Id,
+    string Name,
+    IReadOnlyList<string> CardImageIds);
+
 public record FileDto(Stream Content, string ContentType);
 public record FilesDto(IReadOnlyList<FileDto> Files);
