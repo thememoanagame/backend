@@ -13,7 +13,7 @@ namespace MemoAna.Controllers.v1.System;
 /// Exposes the temporary seed endpoint until all prerequisites are initialized.
 /// </summary>
 [ApiController]
-[AllowAnonymous]
+[ApiExplorerSettings(IgnoreApi = true)]
 [Route("api/v1/seed")]
 public sealed class SeedController(IMediator mediator) : ControllerBase
 {
@@ -31,6 +31,7 @@ public sealed class SeedController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>Executes the seed while the environment still requires it.</summary>
+    [Authorize(AuthenticationSchemes = "SeedBasic")]
     [HttpPost]
     [ProducesResponseType<SeedOperationResultDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<SeedStatusDto>(StatusCodes.Status409Conflict)]
