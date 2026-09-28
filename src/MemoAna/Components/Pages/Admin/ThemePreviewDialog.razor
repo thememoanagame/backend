@@ -20,7 +20,7 @@
                          Style="height:70vh;">
                 @foreach (string cardImageId in CardImageIds)
                 {
-                    <MudCarouselItem T="string" Value="@cardImageId">
+                    <MudCarouselItem>
                         <div class="d-flex justify-center align-center" style="height:70vh;">
                             <MudImage Src="@GetImageUrl(cardImageId)"
                                       Alt="@ThemeName"
