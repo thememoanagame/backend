@@ -18,6 +18,7 @@ namespace MemoAna.Controllers.v1.System;
 public sealed class SeedController(IMediator mediator) : ControllerBase
 {
     /// <summary>Gets the current seed status.</summary>
+    [AllowAnonymous]
     [HttpGet("status")]
     [ProducesResponseType<SeedStatusDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetStatus(
