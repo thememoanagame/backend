@@ -329,4 +329,46 @@
         }
     }
  
+    private async Task OpenThemePreviewAsync(ThemeViewModel theme)
+    {
+        try
+        {
+            var preview = await ThemeService.GetThemePreviewAsync(theme.Id, CancellationToken.None);
+            if (preview is null)
+            {
+                Snackbar.Add("Theme not found.", Severity.Error);
+                return;
+            }
+
+            var parameters = new DialogParameters<ThemePreviewDialog>
+            {
+                { x => x.ThemeId, preview.Id },
+                { x => x.ThemeName, preview.Name },
+                { x => x.CardImageIds, preview.CardImageIds }
+            };
+
+            var options = new DialogOptions
+            {
+                CloseOnEscapeKey = true,
+                FullWidth = true,
+                MaxWidth = MaxWidth.ExtraLarge,
+                BackdropClick = true
+            };
+
+            _ = await DialogService.ShowAsync<ThemePreviewDialog>(
+                preview.Name,
+                parameters,
+                options);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Error loading theme preview for {ThemeId}: {Message}",
+                theme.Id,
+                exception.Message);
+            Snackbar.Add("Unable to load the theme preview.", Severity.Error);
+        }
+    }
+
 }
