@@ -1,10 +1,9 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
 namespace MemoAna.Composition.Authorization;
 
-/// <summary>Describes the authentication schemes used by MemoAna in generated OpenAPI documents.</summary>
+/// <summary>Describes JWT bearer authentication in the generated OpenAPI document.</summary>
 public sealed class BearerOpenApiTransformer : IOpenApiDocumentTransformer
 {
     public Task TransformAsync(
@@ -23,51 +22,11 @@ public sealed class BearerOpenApiTransformer : IOpenApiDocumentTransformer
             BearerFormat = "JWT"
         };
 
-        document.Components.SecuritySchemes["SeedBasic"] = new OpenApiSecurityScheme
-        {
-            Type = SecuritySchemeType.Http,
-            Scheme = "basic",
-            In = ParameterLocation.Header
-        };
-
-        return Task.CompletedTask;
-    }
-}
-
-/// <summary>Applies OpenAPI security requirements according to endpoint authorization metadata.</summary>
-public sealed class AuthorizationOpenApiTransformer : IOpenApiOperationTransformer
-{
-    public Task TransformAsync(
-        OpenApiOperation operation,
-        OpenApiOperationTransformerContext context,
-        CancellationToken cancellationToken)
-    {
-        var metadata = context.Description.ActionDescriptor.EndpointMetadata;
-
-        if (metadata.OfType<AllowAnonymousAttribute>().Any())
-        {
-            return Task.CompletedTask;
-        }
-
-        var authorization = metadata.OfType<IAuthorizeData>().ToArray();
-        if (authorization.Length == 0)
-        {
-            return Task.CompletedTask;
-        }
-
-        operation.Security ??= [];
-
-        bool seedBasic = authorization
-            .SelectMany(x => (x.AuthenticationSchemes ?? string.Empty)
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            .Any(x => string.Equals(x, "SeedBasic", StringComparison.Ordinal));
-
-        operation.Security.Add(
+        document.Security ??= [];
+        document.Security.Add(
             new OpenApiSecurityRequirement
             {
-                [new OpenApiSecuritySchemeReference(
-                    seedBasic ? "SeedBasic" : "Bearer",
-                    document: null)] = []
+                [new OpenApiSecuritySchemeReference("Bearer", document)] = []
             });
 
         return Task.CompletedTask;
