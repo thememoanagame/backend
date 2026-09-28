@@ -13,11 +13,11 @@ public sealed class GameRoomHandlers(IGameService gameService)
       IRequestHandler<GetGameRoomListQuery, Response<IReadOnlyList<RoomSummaryDto>>>
 {
     public async ValueTask<Response<RoomSessionDto>> Handle(CreateRoomCommand request, CancellationToken cancellationToken)
-        => Response.Success(await gameService.CreateRoomAsync(request.Request, cancellationToken));
+        => ResponseMaker.Success(await gameService.CreateRoomAsync(request.Request, cancellationToken));
 
     public async ValueTask<Response<RoomSessionDto>> Handle(JoinRoomCommand request, CancellationToken cancellationToken)
-        => Response.Success(await gameService.JoinRoomAsync(request.RoomId, request.Request, cancellationToken));
+        => ResponseMaker.Success(await gameService.JoinRoomAsync(request.RoomId, request.Request, cancellationToken));
 
     public async ValueTask<Response<IReadOnlyList<RoomSummaryDto>>> Handle(GetGameRoomListQuery request, CancellationToken cancellationToken)
-        => Response.Success(await gameService.ListRoomsAsync(cancellationToken));
+        => ResponseMaker.Success(await gameService.ListRoomsAsync(cancellationToken));
 }

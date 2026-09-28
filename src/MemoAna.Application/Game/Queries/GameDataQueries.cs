@@ -17,9 +17,5 @@ public sealed record GetGameThemeListQuery
     : IRequest<Response<IReadOnlyList<GameThemeDto>>>;
 
 /// <summary>Seaches the image stream of an specific theme card.</summary>
-public sealed record GetThemeCardsByIdQuery(string ThemeId, string CardId) 
-    : IRequest<Response<FileDto>>;
-
-/// <summary>Retrieves the cards from a theme </summary>
-public sealed record GetGameThemeCardsQuery(string ThemeId)
-    : IRequest<Response<FilesDto>>;
+public sealed record GameImageCardQuery(string RoomId, int Position, string Token) 
+    : IRequest<FileDto>;

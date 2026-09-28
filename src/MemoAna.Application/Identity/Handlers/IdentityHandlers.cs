@@ -65,9 +65,9 @@ public sealed class IdentityHandlers(
                 cancellationToken);
 
         return result is null
-            ? Response.Failure<TokenResponse>(
+            ? ResponseMaker.Failure<TokenResponse>(
                 ["Invalid credentials."])
-            : Response.Success(result);
+            : ResponseMaker.Success(result);
     }
 
     /// <inheritdoc />
@@ -83,9 +83,9 @@ public sealed class IdentityHandlers(
                 cancellationToken);
 
         return result is null
-            ? Response.Failure<TokenResponse>(
+            ? ResponseMaker.Failure<TokenResponse>(
                 ["Google Play Games authentication failed."])
-            : Response.Success(result);
+            : ResponseMaker.Success(result);
     }
 
     /// <inheritdoc />
@@ -100,9 +100,9 @@ public sealed class IdentityHandlers(
                 cancellationToken);
 
         return result is null
-            ? Response.Failure<TokenResponse>(
+            ? ResponseMaker.Failure<TokenResponse>(
                 ["Invalid refresh token."])
-            : Response.Success(result);
+            : ResponseMaker.Success(result);
     }
 
     /// <inheritdoc />
@@ -113,7 +113,7 @@ public sealed class IdentityHandlers(
         bool result = await identityService.RevokeAsync(
             request.AccessToken,
             cancellationToken);
-        return Response.Success(result);
+        return ResponseMaker.Success(result);
     }
 
     /// <inheritdoc />
@@ -127,7 +127,7 @@ public sealed class IdentityHandlers(
                 request.Code,
                 request.ChangedEmail,
                 cancellationToken);
-        return Response.Success(result);
+        return ResponseMaker.Success(result);
     }
 
     /// <inheritdoc />
@@ -177,9 +177,9 @@ public sealed class IdentityHandlers(
                 cancellationToken);
 
         return result is null
-            ? Response.Failure<IdentityInfoResponse>(
+            ? ResponseMaker.Failure<IdentityInfoResponse>(
                 ["User not found."])
-            : Response.Success(result);
+            : ResponseMaker.Success(result);
     }
 
     /// <inheritdoc />
@@ -213,8 +213,8 @@ public sealed class IdentityHandlers(
                 cancellationToken);
 
         return result is null
-            ? Response.Failure<TwoFactorResponse>(
+            ? ResponseMaker.Failure<TwoFactorResponse>(
                 ["Invalid 2FA configuration."])
-            : Response.Success(result);
+            : ResponseMaker.Success(result);
     }
 }

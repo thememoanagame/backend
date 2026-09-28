@@ -54,13 +54,17 @@ public sealed class GameRoomController(
     {
         try
         {
-            var file = await gameService.GetCardImageAsync(
-                roomId,
-                position,
-                token,
+            var result = await mediator.Send(
+                new GameImageCardQuery(roomId, position, token),
                 cancellationToken);
 
-            return File(file.Content, file.ContentType);
+            if (result is null)
+                return BadRequest(result);
+
+            return result is FileDto f ?
+            File(f.Content, f.ContentType) : 
+            NotFound(Application.Common.Responses.ResponseMaker.Failure(["Card Image not found"]));
+
         }
         catch (UnauthorizedAccessException)
         {

@@ -61,7 +61,7 @@ public sealed class IdentityControllerTests
                 It.IsAny<LoginCommand>(),
                 It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<Response<TokenResponse>>(
-                Response.Success(token)));
+                ResponseMaker.Success(token)));
         IdentityController controller = new(mediator.Object);
 
         IActionResult result = await controller.Login(
@@ -84,7 +84,7 @@ public sealed class IdentityControllerTests
                 It.IsAny<LoginCommand>(),
                 It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<Response<TokenResponse>>(
-                Response.Failure<TokenResponse>("error")));
+                ResponseMaker.Failure<TokenResponse>("error")));
         IdentityController controller = new(mediator.Object);
 
         IActionResult result = await controller.Login(
@@ -103,7 +103,7 @@ public sealed class IdentityControllerTests
                 It.IsAny<RefreshTokenCommand>(),
                 It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<Response<TokenResponse>>(
-                Response.Success(token)));
+                ResponseMaker.Success(token)));
         IdentityController controller = new(mediator.Object);
 
         IActionResult result = await controller.Refresh(
@@ -121,7 +121,7 @@ public sealed class IdentityControllerTests
                 It.IsAny<RefreshTokenCommand>(),
                 It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<Response<TokenResponse>>(
-                Response.Failure<TokenResponse>("error")));
+                ResponseMaker.Failure<TokenResponse>("error")));
         IdentityController controller = new(mediator.Object);
 
         IActionResult result = await controller.Refresh(
@@ -139,7 +139,7 @@ public sealed class IdentityControllerTests
                 It.IsAny<RevokeTokenCommand>(),
                 It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<Response<bool>>(
-                Response.Success(true)));
+                ResponseMaker.Success(true)));
         IdentityController controller = CreateController(mediator);
         controller.Request.Headers.Authorization = "Bearer token";
 
@@ -157,7 +157,7 @@ public sealed class IdentityControllerTests
                 It.IsAny<RevokeTokenCommand>(),
                 It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<Response<bool>>(
-                Response.Success(false)));
+                ResponseMaker.Success(false)));
         IdentityController controller = CreateController(mediator);
 
         IActionResult result = await controller.Revoke(
@@ -174,7 +174,7 @@ public sealed class IdentityControllerTests
                 It.IsAny<ConfirmEmailCommand>(),
                 It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<Response<bool>>(
-                Response.Success(true)));
+                ResponseMaker.Success(true)));
         IdentityController controller = new(mediator.Object);
 
         IActionResult result = await controller.ConfirmEmail(
@@ -194,7 +194,7 @@ public sealed class IdentityControllerTests
                 It.IsAny<ConfirmEmailCommand>(),
                 It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<Response<bool>>(
-                Response.Success(false)));
+                ResponseMaker.Success(false)));
         IdentityController controller = new(mediator.Object);
 
         IActionResult result = await controller.ConfirmEmail(
@@ -338,7 +338,7 @@ public sealed class IdentityControllerTests
                 It.IsAny<GetIdentityInfoQuery>(),
                 It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<Response<IdentityInfoResponse>>(
-                Response.Success(info)));
+                ResponseMaker.Success(info)));
         IdentityController controller = CreateController(
             mediator,
             new Claim(JwtRegisteredClaimNames.Sub, "subject"));
@@ -362,7 +362,7 @@ public sealed class IdentityControllerTests
                 It.IsAny<GetIdentityInfoQuery>(),
                 It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<Response<IdentityInfoResponse>>(
-                Response.Failure<IdentityInfoResponse>("missing")));
+                ResponseMaker.Failure<IdentityInfoResponse>("missing")));
         IdentityController controller = CreateController(
             mediator,
             new Claim(ClaimTypes.NameIdentifier, "user"));
@@ -453,7 +453,7 @@ public sealed class IdentityControllerTests
                 It.IsAny<ConfigureTwoFactorCommand>(),
                 It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<Response<TwoFactorResponse>>(
-                Response.Success(response)));
+                ResponseMaker.Success(response)));
         IdentityController controller = CreateController(
             mediator,
             new Claim(ClaimTypes.NameIdentifier, "user"));
@@ -474,7 +474,7 @@ public sealed class IdentityControllerTests
                 It.IsAny<ConfigureTwoFactorCommand>(),
                 It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<Response<TwoFactorResponse>>(
-                Response.Failure<TwoFactorResponse>("error")));
+                ResponseMaker.Failure<TwoFactorResponse>("error")));
         IdentityController controller = CreateController(
             mediator,
             new Claim(ClaimTypes.NameIdentifier, "user"));

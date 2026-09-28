@@ -17,7 +17,7 @@ public sealed class SeedHandlers(ISqlSeedService seedService)
         GetSeedStatusQuery request,
         CancellationToken cancellationToken)
     {
-        return Response.Success(
+        return ResponseMaker.Success(
             await seedService.GetStatusAsync(cancellationToken));
     }
 
@@ -26,7 +26,7 @@ public sealed class SeedHandlers(ISqlSeedService seedService)
         SeedApplicationCommand request,
         CancellationToken cancellationToken)
     {
-        return Response.Success(
+        return ResponseMaker.Success(
             await seedService.SeedAsync(cancellationToken));
     }
 }

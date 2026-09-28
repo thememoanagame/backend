@@ -170,21 +170,6 @@ public class ThemeService(IRepository<Theme> repository, ICardsRepository imageR
         }
     }
 
-    public async Task<FilesDto> GetThemeImagesAsync(string themeId, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var theme = await repository.GetByIdAsync(themeId, cancellationToken) ?? throw new KeyNotFoundException("Theme not found");
-            var streams = await imageRepository.GetThemeImageStreamsAsync(themeId);
-            return new FilesDto([.. streams.Select(x => new FileDto(x,((LiteFileStream<string>)x).FileInfo.MimeType))]);
-        }
-        catch (Exception e)
-        {
-            logger.LogError(e, "Error getting theme images: {Message}", e.Message);
-            throw;
-        }
-    }
-
     public async Task<GameThemeDto> UpdateThemeAsync(string id, string name, CancellationToken cancellationToken = default)
     {
         // Obs: Se a edição de tema permitir alterar as imagens, você deve orquestrar

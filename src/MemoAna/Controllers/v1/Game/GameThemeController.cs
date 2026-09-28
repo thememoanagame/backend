@@ -35,33 +35,31 @@ public class GameThemeController(IMediator mediator) : ControllerBase
     }
 
     [HttpGet("{key}/theme")]
-    [ProducesResponseType(typeof(Application.Common.Responses.Response<GameThemeDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(Application.Common.Responses.Response<GameThemeDto>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(Application.Common.Responses.Response<GameThemeDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Response<GameThemeDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Response), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Response<GameThemeDto>), StatusCodes.Status404NotFound)]
     public async ValueTask<IActionResult> Get(string key, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(key) || string.IsNullOrEmpty(key))
         {
-            return BadRequest(Application.Common.Responses.Response.Failure<GameThemeDto>(["O filtro de busca do tema não pode ser vazio."]));
+            return BadRequest(ResponseMaker.Failure(["O filtro de busca do tema não pode ser vazio."]));
         }
 
         var isId = Guid.TryParse(key, out var _);
-        Application.Common.Responses.Response<GameThemeDto> response;
         if (isId)
         {
-            response = await mediator.Send(new GetGameThemeByIdQuery(key), cancellationToken);
+            var response = await mediator.Send(new GetGameThemeByIdQuery(key), cancellationToken);
+            if (response.Succeeded && response.Data != null)
+                return Ok(response);
+            return NotFound(response);
         }
         else
         {
-            response = await mediator.Send(new GetGameThemeByNameQuery(key), cancellationToken);
+            var response = await mediator.Send(new GetGameThemeByNameQuery(key), cancellationToken);
+            if (response.Succeeded && response.Data != null)
+                return Ok(response);
+            return NotFound(response);
         }
-
-        if (response.Succeeded && response.Data != null)
-        {
-            return Ok(response);
-        }
-
-        return NotFound(response);
     }
 
 }

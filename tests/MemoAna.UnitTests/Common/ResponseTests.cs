@@ -9,11 +9,11 @@ public sealed class ResponseTests
     public void ResponseFactories_CreateExpectedResults()
     {
         Response<string> success =
-            Response.Success("data");
+            ResponseMaker.Success("data");
         Response<string> enumerableFailure =
-            Response.Failure<string>(["error"]);
+            ResponseMaker.Failure<string>(["error"]);
         Response<string> paramsFailure =
-            Response.Failure<string>("error", "second");
+            ResponseMaker.Failure<string>("error", "second");
 
         Assert.True(success.Succeeded);
         Assert.Equal("data", success.Data);

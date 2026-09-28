@@ -54,7 +54,7 @@ public sealed class SeedController(IMediator mediator) : ControllerBase
         }
         catch (SeedException exception)
         {
-            return BadRequest(Application.Common.Responses.Response.Failure<SeedOperationResultDto>(
+            return BadRequest(Application.Common.Responses.ResponseMaker.Failure<SeedOperationResultDto>(
                 exception.Errors));
         }
     }
