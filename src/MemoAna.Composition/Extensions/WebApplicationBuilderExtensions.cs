@@ -1,8 +1,9 @@
 using Infisical.Sdk;
-using Infisical.Sdk.Model; 
+using Infisical.Sdk.Model;
+using MemoAna.Composition.Authorization;
 using MemoAna.Infrastructure.Common.HealthChecks;
 using MemoAna.Infrastructure.Identity.Options;
-using MemoAna.Infrastructure.Persistence.Options; 
+using MemoAna.Infrastructure.Persistence.Options;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
@@ -30,19 +31,20 @@ public static class WebApplicationBuilderExtensions
             if (builder.Environment.IsDevelopment() && Environment.GetEnvironmentVariable("DOTNET_IS_RUNNING_ON_CONTAINER") != "true")
             {
                 var currentDir = new DirectoryInfo(AppContext.BaseDirectory);
-            
+
                 while (currentDir != null && !File.Exists(Path.Combine(currentDir.FullName, ".env")))
                 {
                     currentDir = currentDir.Parent;
                 }
-                
+
                 if (currentDir is null)
                 {
-                    throw new InvalidOperationException("No .env found"); 
+                    throw new InvalidOperationException("No .env found");
                 }
 
                 Env.Load(Path.Combine(currentDir.FullName, ".env"));
-            } 
+            }
+
             _ = await builder.ConfigureSettings();
             _ = builder.ConfigurePresentation(configurePresentationServices);
             _ = builder.Services.ConfigureDatabase(builder.Configuration);
@@ -52,14 +54,17 @@ public static class WebApplicationBuilderExtensions
             _ = builder.Services.ConfigureApplicationServices();
             await builder.Build().RunMemoAnaAsync<TApp>();
         }
-        
+
         private WebApplicationBuilder ConfigurePresentation(Action<WebApplicationBuilder> configurePresentationServices)
         {
             _ = builder.Services.AddCascadingAuthenticationState();
             _ = builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
             _ = builder.Services.AddControllers();
-            _ = builder.Services.AddOpenApi();
+            _ = builder.Services.AddOpenApi(options =>
+            {
+                options.AddDocumentTransformer<BearerOpenApiTransformer>();
+            });
             configurePresentationServices?.Invoke(builder);
             _ = builder.Services
                 .AddHealthChecks()
@@ -72,15 +77,11 @@ public static class WebApplicationBuilderExtensions
 
         private async Task<WebApplicationBuilder> ConfigureSettings()
         {
-
             _ = builder.Configuration
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables();
-
-            //var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
-            //builder.WebHost.UseUrls($"http://*:{port};https://*:{(int.Parse(port) + 443)}");
 
             string? cid = Environment.GetEnvironmentVariable("ICID");
             string? cs = Environment.GetEnvironmentVariable("ICS");
@@ -119,6 +120,7 @@ public static class WebApplicationBuilderExtensions
             {
                 throw new InvalidConfigurationException("Infisical Machine Identity credentials are missing. Please set ICID, ICS, and IPID environment variables.");
             }
+
             _ = builder.Services.Configure<JwtOptions>(
                 builder.Configuration.GetSection(
                     JwtOptions.SectionName));
